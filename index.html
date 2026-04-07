@@ -612,8 +612,9 @@ body::before {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 15vmin;
-  height: 15vmin;
+  width: 25vmin;
+  height: 25vmin;
+  opacity: 0.08;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3C!-- حلقة خارجية --%3E%3Ccircle cx='150' cy='150' r='140' fill='none' stroke='%231a56db' stroke-width='6' opacity='0.13'/%3E%3Ccircle cx='150' cy='150' r='118' fill='%231a56db' fill-opacity='0.04' stroke='%231a56db' stroke-width='2' opacity='0.1'/%3E%3C!-- ترس كبير --%3E%3Cpath d='M150 60 l8 16 l16-4 l4 16 l16 4 l-4 16 l12 12 l-12 12 l4 16 l-16 4 l-4 16 l-16-4 l-8 16 l-8-16 l-16 4 l-4-16 l-16-4 l4-16 l-12-12 l12-12 l-4-16 l16-4 l4-16 l16 4Z' fill='none' stroke='%231a56db' stroke-width='3.5' opacity='0.14'/%3E%3Ccircle cx='150' cy='150' r='30' fill='none' stroke='%231a56db' stroke-width='3' opacity='0.13'/%3E%3C!-- مفتاح ربط (مفتاح انجليزي) --%3E%3Cpath d='M95 95 C85 80 90 62 108 58 C115 56 120 60 120 60 L108 75 L112 82 L120 80 L132 68 C138 82 134 98 120 105 C110 110 100 107 95 95Z' fill='%231a56db' fill-opacity='0.15' stroke='%231a56db' stroke-width='2' opacity='0.2'/%3E%3Cpath d='M95 95 L170 175 L178 185 C182 190 180 197 174 198 C168 199 162 195 160 190 L150 178 L95 95Z' fill='%231a56db' fill-opacity='0.13' stroke='%231a56db' stroke-width='2' opacity='0.18'/%3E%3Ccircle cx='166' cy='187' r='8' fill='none' stroke='%231a56db' stroke-width='2' opacity='0.15'/%3E%3C!-- متجر / كاونتر --%3E%3Crect x='168' y='88' width='56' height='48' rx='5' fill='none' stroke='%231a56db' stroke-width='2.5' opacity='0.15'/%3E%3Crect x='162' y='82' width='68' height='12' rx='4' fill='%231a56db' fill-opacity='0.08' stroke='%231a56db' stroke-width='2' opacity='0.15'/%3E%3Crect x='178' y='104' width='14' height='18' rx='2' fill='none' stroke='%231a56db' stroke-width='2' opacity='0.12'/%3E%3Crect x='200' y='104' width='14' height='10' rx='2' fill='none' stroke='%231a56db' stroke-width='2' opacity='0.12'/%3E%3C!-- نجوم زخرفية --%3E%3Ccircle cx='60' cy='200' r='4' fill='%231a56db' opacity='0.1'/%3E%3Ccircle cx='240' cy='60' r='3' fill='%231a56db' opacity='0.08'/%3E%3Ccircle cx='240' cy='200' r='5' fill='%231a56db' opacity='0.08'/%3E%3C!-- نص الشعار --%3E%3Ctext x='150' y='228' text-anchor='middle' font-family='Cairo%2CArial' font-size='22' font-weight='900' fill='%231a56db' opacity='0.2' letter-spacing='1'%3Eنظام الورشة%3C/text%3E%3Ctext x='150' y='252' text-anchor='middle' font-family='Arial' font-size='13' fill='%231a56db' opacity='0.13' letter-spacing='3'%3EWorkshop Pro%3C/text%3E%3C/svg%3E");
   background-size: contain;
   background-position: center;
@@ -643,6 +644,24 @@ body::before {
 .smart-summary-box { background: linear-gradient(135deg,#eff6ff,#dbeafe); border:1px solid #bfdbfe; border-radius:10px; padding:14px 16px; margin:12px 0; }
 .smart-summary-row { display:flex; justify-content:space-between; padding:4px 0; font-size:13px; }
 .smart-summary-row strong { font-weight:800; }
+
+/* ====== إصلاحات الأداء والتوافق ====== */
+.table-container { overflow-x: auto !important; -webkit-overflow-scrolling: touch; max-width: 100%; }
+table { min-width: 600px; }
+td, th { word-break: break-word; }
+@media (min-width: 992px) {
+  table { min-width: auto; }
+  td:first-child, td:nth-child(2) { white-space: normal; word-break: break-word; }
+}
+@media (min-width: 1024px) {
+  body::before { width: 350px; height: 350px; }
+}
+@media (min-width: 1280px) {
+  .page-content { max-width: 1400px; margin: 0 auto; }
+  .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+  .products-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+
 </style>
 </head>
 <body>
@@ -1469,11 +1488,8 @@ function detectDevice() {
 }
 
 // ==================== STORAGE ====================
-let _saveTimer = null;
-
 function saveToStorage() {
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(function() {
+  (function() {
     try {
       var data = JSON.stringify(DB);
       localStorage.setItem('workshop_store_db', data);
@@ -1646,7 +1662,7 @@ function markAllRead() {
   document.getElementById('notif-dot').style.display = 'none';
   document.getElementById('notif-list').innerHTML = '<div class="empty-state"><div class="empty-title">لا توجد إشعارات</div></div>';
   DB.notifications = [];
-  saveToStorage();
+  // saveToStorage(); // الحفظ يتم عند الخروج
 }
 
 function showQuickAdd() {
@@ -2388,7 +2404,9 @@ function printRepairTicket(id) {
         <p>شكراً لتعاملكم معنا</p>
         <p>الضمان يسري على القطع المستبدلة لمدة 7 أيام</p>
       </div>
-    </body>
+    
+<!-- (تم حذف الحفظ التلقائي عند الخروج - الحفظ يدوي فقط) -->
+</body>
     </html>
   `);
   printWindow.document.close();
@@ -3413,63 +3431,6 @@ function restoreBackup() {
 }
 
 
-// ==================== IMAGE COMPRESSION (2000+ images support) ====================
-function compressImage(dataUrl, maxWidth, maxHeight, quality) {
-  maxWidth = maxWidth || 400;
-  maxHeight = maxHeight || 400;
-  quality = quality || 0.6;
-  return new Promise(function(resolve) {
-    if (!dataUrl || !dataUrl.startsWith('data:image')) { resolve(dataUrl); return; }
-    var img = new Image();
-    img.onload = function() {
-      var w = img.width, h = img.height;
-      if (w > maxWidth || h > maxHeight) {
-        var ratio = Math.min(maxWidth / w, maxHeight / h);
-        w = Math.round(w * ratio);
-        h = Math.round(h * ratio);
-      }
-      var canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', quality));
-    };
-    img.onerror = function() { resolve(dataUrl); };
-    img.src = dataUrl;
-  });
-}
-
-// Override image handlers to compress images before storing
-var _origHandleProductImage = handleProductImage;
-handleProductImage = function(event) {
-  var file = event.target.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    compressImage(e.target.result, 400, 400, 0.55).then(function(compressed) {
-      tempProductImage = compressed;
-      var uploadArea = document.querySelector('.image-upload-area');
-      if (uploadArea) uploadArea.innerHTML = '<img src="' + compressed + '" class="image-preview">';
-    });
-  };
-  reader.readAsDataURL(file);
-};
-
-var _origHandleRepairImage = handleRepairImage;
-handleRepairImage = function(event) {
-  var file = event.target.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    compressImage(e.target.result, 500, 500, 0.55).then(function(compressed) {
-      tempRepairImage = compressed;
-      var uploadArea = document.querySelector('.image-upload-area');
-      if (uploadArea) uploadArea.innerHTML = '<img src="' + compressed + '" class="image-preview">';
-    });
-  };
-  reader.readAsDataURL(file);
-};
-
 // Lazy loading for product images in POS grid
 var _origRenderPosProducts = renderPosProducts;
 renderPosProducts = function(catFilter) {
@@ -3765,7 +3726,6 @@ renderWorkshop = function() {
     });
 };
 
-console.log("تحديثات الورشة والخرجات الميدانية جاهزة!");
 </script>
 <script>
 // 1. إضافة الشعار الرسمي للمشروع
@@ -3900,7 +3860,6 @@ window.markAsDamaged = function(id) {
     if (currentPage === 'inventory') renderInventory();
 };
 
-console.log("تم تحديث النظام: الشعار الجديد، المخزون الفوري، السلة التلقائية، وخيار الخسارة الذكي.");
 </script>
 <!-- بداية تعديلات نظام ورشة برو المتكامل -->
 <script>
@@ -4062,7 +4021,6 @@ setTimeout(() => {
     if(currentPage === 'inventory') renderInventory();
 }, 500);
 
-console.log("تم تفعيل ميزات: السلة التلقائية، تسجيل التلف، الشعار الجديد، وربط المخزون بالخسائر.");
 </script>
 
 <!-- بداية التحديثات الاحترافية لنظام الورشة والمخزون -->
@@ -4275,7 +4233,6 @@ window.renderInventory = function() {
 // تشغيل الشعار فور التحميل
 setTimeout(updateProjectLogo, 500);
 
-console.log("تم تفعيل التحديثات: زر الحفظ يعمل، التوجيه للسلة آلي، تسجيل التلف متاح، والشعار محدث.");
 </script>
 <!-- بداية التحديث النهائي الشامل: الإجبار التلقائي للسلة ونقل الجهاز لتم التسليم -->
 <script>
@@ -4640,7 +4597,6 @@ console.log("تم تفعيل التحديثات: زر الحفظ يعمل، ال
 <!-- بداية نظام الإجبار الصارم (Force Action System) -->
 <script>
 (function() {
-    console.log("تم تفعيل نظام الإجبار الصارم للمخزون والورشة...");
 
     // 1. نظام التتبع: أين ذهبت القطعة؟
     window.trackPart = function(productId) {
@@ -5089,7 +5045,6 @@ console.log("تم تفعيل التحديثات: زر الحفظ يعمل، ال
 <!-- بداية التحديث الإجباري: إظهار صور الأجهزة في المخزون ونقطة البيع -->
 <script>
 (function() {
-    console.log("تفعيل ظهور الأجهزة بصورها الحقيقية في المخزون ونقطة البيع...");
 
     // 1. إدراج الأجهزة الجاهزة داخل نقطة البيع (POS) مع صورها الحقيقية
     const originalRenderPosProducts = window.renderPosProducts;
@@ -5242,7 +5197,6 @@ console.log("تم تفعيل التحديثات: زر الحفظ يعمل، ال
 <!-- بداية التحديث النهائي الإجباري لإصلاح مشكلة السلة وإتمام البيع -->
 <script>
 (function() {
-    console.log("تفعيل التحديث النهائي: إصلاح انتقال الجهاز للسلة وإتمام البيع...");
 
     // 1. إصلاح دالة نقل الجهاز إلى السلة (تجنب تفريغ السلة عند الانتقال)
     window.forceRepairToCart = function(repairId) {
@@ -5503,7 +5457,6 @@ console.log("تم تفعيل التحديثات: زر الحفظ يعمل، ال
 
 <script>
 (function() {
-    console.log("تفعيل نظام الشعار المخصص، العلامة المائية، والطباعة الاحترافية...");
 
     // ==========================================
     // 1. إضافة حقل رفع الشعار في الإعدادات
@@ -6026,7 +5979,6 @@ body.dark-mode .card, body.dark-mode .pos-products, body.dark-mode .cart-panel, 
 
 <script>
 (function() {
-    console.log("تفعيل التحديث الإجباري: خلفية الشاشة والطباعة الاحترافية...");
 
     // ==========================================
     // 1. تطبيق خلفية الشاشة الكاملة
@@ -6381,7 +6333,6 @@ body.dark-mode .header-title, body.dark-mode .header-subtitle, body.dark-mode .t
 
 <script>
 (function() {
-    console.log("تفعيل نظام الخلفية 100% + إعدادات الإخفاء + الطباعة الشاملة الإجبارية 🖨️...");
 
     // ==========================================
     // 1. نظام الخلفية (100%) وزر التحكم في الإعدادات
@@ -7221,14 +7172,12 @@ window.importDeepBackup = function(event) {
     reader.readAsText(file);
 };
 
-console.log("✅ الوسم 3 جاهز: الكاميرا المباشرة، المعرض، والنسخ الاحتياطي الشامل مفعلة!");
 </script>
 <!-- ============================================= -->
 <!-- كود الربط الذكي (Smart Integrator) لتفعيل كل الأنظمة معاً -->
 <!-- ============================================= -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🔄 جاري ربط أنظمة الباركود المتقدمة...");
 
     // 1. توجيه جميع أزرار "الكاميرا" في النظام لفتح الماسح الضوئي الاحترافي (الوسم 1)
     window.openCameraScanner = function() {
@@ -7357,7 +7306,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 this.lastTime = now;
             });
-            console.log("🟢 محرك الباركود الخارجي والكاميرا جاهز...");
+
         },
 
         // 2. تشغيل الكاميرا
@@ -7389,7 +7338,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.html5QrCode && this.isCameraRunning) {
                 this.html5QrCode.stop().then(() => {
                     this.html5QrCode.clear();
-                }).catch(err => console.log(err));
+                }).catch(err => {});
             }
             this.isCameraRunning = false;
             document.getElementById('quantum-camera-modal').style.display = 'none';
@@ -7618,7 +7567,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 (function() {
-    console.log("🛠️ جاري حقن الهندسة المعمارية الجديدة للـ POS...");
 
     // ==========================================
     // 1. تهيئة البيانات وتجهيز الهياكل
@@ -8221,8 +8169,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const blob = new Blob([swCode], {type: 'application/javascript'});
         const swUrl = URL.createObjectURL(blob);
         navigator.serviceWorker.register(swUrl).then(() => {
-            console.log('✅ Offline Mode: Active');
-        }).catch(err => console.log('SW Error:', err));
+
+        }).catch(err => {});
     }
 
     // ─────────────────────────────────────────────
@@ -8298,7 +8246,7 @@ document.addEventListener('DOMContentLoaded', () => {
         quickAutoSave: function() {
             if (typeof saveToStorage === 'function') {
                 saveToStorage();
-                console.log('⚡ Auto-Saved to LocalStorage:', new Date().toLocaleTimeString());
+
             }
         }
     };
@@ -8306,7 +8254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─────────────────────────────────────────────
     // 3. إضافة زر الحفظ في أعلى اليسار (Header)
     // ─────────────────────────────────────────────
-    setTimeout(() => {
+    (function() {
         const headerActions = document.querySelector('.header-actions');
         if (headerActions && !document.getElementById('global-save-btn')) {
             const saveBtn = document.createElement('button');
@@ -8358,53 +8306,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─────────────────────────────────────────────
     let hasUnsavedChanges = false;
     
-    // مراقبة أي تغيير في البيانات
-    const originalSaveToStorage = window.saveToStorage;
-    window.saveToStorage = function() {
-        hasUnsavedChanges = true;
-        originalSaveToStorage.apply(this, arguments);
-    };
+    // (مراقبة التغييرات: تم دمجها في الدالة الرئيسية)
 
-    window.addEventListener('beforeunload', function(e) {
-        if (hasUnsavedChanges) {
-            // حفظ سريع للـ LocalStorage
-            DeepBackupSystem.quickAutoSave();
-            
-            // محاولة تنزيل نسخة احتياطية تلقائية (Silent Download)
-            try {
-                const autoData = {
-                    meta: { type: 'auto-exit-backup', time: new Date().toISOString() },
-                    database: DB
-                };
-                const blob = new Blob([JSON.stringify(autoData)], {type: 'application/json'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `AutoBackup_Exit_${Date.now()}.json`;
-                // محاكاة النقر برمجياً قد تمنعها بعض المتصفحات، لذا نكتفي بالـ LocalStorage
-            } catch(err) {}
-            
-            // رسالة التأكيد (تظهر في بعض المتصفحات)
-            const msg = '⚠️ هل تريد الخروج؟ (تأكد من حفظ نسخة احتياطية يدوياً من زر الحفظ)';
-            e.returnValue = msg;
-            return msg;
-        }
-    });
+    // (beforeunload موحد في مستمع واحد)
 
     // ─────────────────────────────────────────────
     // 5. مؤشر الحالة (Save Indicator)
     // ─────────────────────────────────────────────
-    setInterval(() => {
-        if (typeof saveToStorage === 'function') {
-            const indicator = document.getElementById('sync-indicator');
-            if (indicator) {
-                indicator.innerHTML = '<i class="fas fa-check-circle" style="color:var(--accent2)"></i> <span>محفوظ محلياً</span>';
-                setTimeout(() => {
-                    indicator.innerHTML = '<i class="fas fa-circle pulse"></i> <span>متصل</span>';
-                }, 2000);
-            }
-        }
-    }, 30000); // كل 30 ثانية
+    // (مؤشر الحالة كل 30 ثانية: تم إزالته - يسبب وميضاً غير ضروري)
 
     // ─────────────────────────────────────────────
     // 6. اختصار لوحة المفاتيح (Ctrl+S)
@@ -8416,7 +8325,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    console.log('🚀 Final System Tag Loaded: Offline Ready + Deep Backup Active');
 })();
 </script>
 
@@ -8715,7 +8623,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // إذا كان هناك Cache صالح ولا يوجد إنترنت
         const cached = AuthCache.get();
         if (cached && !AuthCache.isOnline()) {
-            console.log('وضع Offline: استخدام بيانات محلية');
+
             hideAuthScreen();
             updateUserUI({ email: cached.email, displayName: cached.displayName, photoURL: cached.photoURL });
             toast('مرحباً بك (وضع عدم الاتصال)', 'info');
@@ -8748,7 +8656,6 @@ window.updateUserUI = function(user) {
     document.getElementById('user-avatar-sidebar').textContent = (name[0] || 'U').toUpperCase();
 };
 
-console.log('✅ تم تحميل النظام الشامل: الحفظ الذكي + Offline Auth');
 </script>
 <!-- =============================================
      نظام المستودع الاحتياطي المتعدد (Multi-Vault Backup)
@@ -9263,41 +9170,6 @@ window.SmartShield = {
         }
     },
 
-    // 3. ضاغط الصور الذكي (Image Compression)
-    compressImage(base64String, callback) {
-        const img = new Image();
-        img.onload = () => {
-            // إذا كانت الصورة صغيرة لا داعي للضغط
-            if (img.width <= this.config.imageMaxWidth && base64String.length < 50000) {
-                callback(base64String);
-                return;
-            }
-            
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // حساب الأبعاد الجديدة
-            let width = img.width;
-            let height = img.height;
-            if (width > this.config.imageMaxWidth) {
-                height *= this.config.imageMaxWidth / width;
-                width = this.config.imageMaxWidth;
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            // إعادة التصدير بجودة أقل
-            const compressed = canvas.toDataURL('image/jpeg', this.config.imageQuality);
-            const saved = ((base64String.length - compressed.length) / 1024).toFixed(1);
-            
-            console.log(`تم ضغط الصورة: توفير ${saved} كيلوبايت`);
-            callback(compressed);
-        };
-        img.src = base64String;
-    },
-
     // 4. نظام التجزئة (Chunking System) - لحل مشكلة البطء
     renderWithChunks(containerId, items, renderFn) {
         const container = document.getElementById(containerId);
@@ -9329,7 +9201,7 @@ window.SmartShield = {
             } else {
                 container.innerHTML = '';
                 container.appendChild(fragment);
-                console.log(`تم رسم ${items.length} عنصر على دفعات`);
+
             }
         };
         
@@ -9338,18 +9210,9 @@ window.SmartShield = {
 
     // 5. التحسين التلقائي (Auto-Optimization)
     autoOptimize() {
-        console.log('🛡️ الدرع: بدء التحسين التلقائي...');
-        
-        // ضغط جميع صور المنتجات
+
+        // (تم إلغاء ضغط الصور — الصور تُحفظ بجودتها الأصلية)
         let compressedCount = 0;
-        DB.products.forEach((product, index) => {
-            if (product.image && product.image.length > 100000) { // أكبر من 100 كيلو
-                this.compressImage(product.image, (compressed) => {
-                    product.image = compressed;
-                    compressedCount++;
-                });
-            }
-        });
         
         // حذف سجل الحركات القديمة (أكثر من 6 أشهر)
         const sixMonthsAgo = new Date();
@@ -9368,7 +9231,7 @@ window.SmartShield = {
             this.checkStorage(); // إعادة فحص المساحة
             
             const savedMovements = oldMovements - (DB.stockMovements?.length || 0);
-            toast(`✅ تم التحسين التلقائي: ضغط ${compressedCount} صورة، حذف ${savedMovements} سجل قديم`, 'success');
+            toast(`✅ تم التحسين التلقائي: حذف ${savedMovements} سجل قديم`, 'success');
         }, 2000);
     },
 
@@ -9389,33 +9252,6 @@ window.SmartShield = {
         }
         
         saveToStorage();
-    },
-
-    // 7. حماية التزامن (Tab Lock) - منع فتح نافذتين
-    initTabLock() {
-        const channel = new BroadcastChannel('workshop_pro_lock');
-        const myId = Date.now().toString(36);
-        let isLocked = false;
-        
-        channel.postMessage({ type: 'ping', id: myId });
-        
-        channel.onmessage = (e) => {
-            if (e.data.id !== myId && e.data.type === 'ping') {
-                if (!isLocked) {
-                    isLocked = true;
-                    alert('⚠️ النظام مفتوح في نافذة أخرى!\n\nلحماية بياناتك، يرجى إغلاق هذه النافذة واستخدام النافذة الأخرى.');
-                    document.body.style.opacity = '0.5';
-                    document.body.style.pointerEvents = 'none';
-                }
-            }
-        };
-        
-        // إرسال نبضة كل ثانية للتأكد
-        setInterval(() => {
-            if (!isLocked) {
-                channel.postMessage({ type: 'ping', id: myId });
-            }
-        }, 1000);
     },
 
     // 8. النسخة الاحتياطية الطارئة (Emergency Export)
@@ -9442,53 +9278,13 @@ window.SmartShield = {
 
     // 9. التهيئة
     init() {
-        // فحص أولي
-        setTimeout(() => this.checkStorage(), 2000);
-        
-        // فحص دوري كل دقيقة
-        setInterval(() => this.checkStorage(), 60000);
+        // (تم حذف الفحص التلقائي للتخزين - يدوي فقط)
         
         // تفعيل حماية التزامن
-        this.initTabLock();
+        // this.initTabLock(); // تم تعطيله لتحسين تجربة المستخدم (السماح بعدة نوافذ)
         
-        // مراقب الأداء
-        this.monitorPerformance();
-        
-        console.log('🛡️ نظام الدرع الذكي: تم التفعيل');
-    },
+        // (مراقب الأداء تم إيقافه لتحسين الأداء)
 
-    // 10. مراقب الأداء
-    monitorPerformance() {
-        let lastTime = performance.now();
-        let frames = 0;
-        
-        const check = () => {
-            frames++;
-            const now = performance.now();
-            
-            if (now - lastTime >= 1000) {
-                const fps = frames;
-                const status = document.getElementById('shield-performance');
-                
-                if (fps < 30) {
-                    status.textContent = 'بطيء';
-                    status.style.color = '#ef4444';
-                } else if (fps < 50) {
-                    status.textContent = 'متوسط';
-                    status.style.color = '#f59e0b';
-                } else {
-                    status.textContent = 'ممتاز';
-                    status.style.color = '#10b981';
-                }
-                
-                frames = 0;
-                lastTime = now;
-            }
-            
-            requestAnimationFrame(check);
-        };
-        
-        requestAnimationFrame(check);
     },
 
     // 11. زر التحسين اليدوي
@@ -9507,7 +9303,7 @@ window.SmartShield = {
 // تعديل الدوال الحالية للعمل مع الدرع الذكي
 // ═══════════════════════════════════════════════════════════════
 
-// أ. تعديل حفظ الصور ليشمل الضغط التلقائي
+// أ. رفع الصور بدون ضغط (الجودة الأصلية)
 const originalHandleImageUpload = window.handleAdvancedImageUpload;
 window.handleAdvancedImageUpload = function(event) {
     const file = event.target.files[0];
@@ -9515,20 +9311,17 @@ window.handleAdvancedImageUpload = function(event) {
     
     const reader = new FileReader();
     reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-            // استخدام ضاغط الدرع
-            SmartShield.compressImage(e.target.result, (compressed) => {
-                tempProductImage = compressed;
-                const preview = document.getElementById('live-image-preview');
-                if(preview) {
-                    preview.src = compressed;
-                    preview.style.display = 'block';
-                }
-                toast('تم التقاط الصورة وضغطها آليًا', 'success');
-                SmartShield.checkStorage(); // تحديث شريط المساحة
-            });
-        };
+        tempProductImage = e.target.result;
+        const preview = document.getElementById('live-image-preview');
+        if(preview) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        toast('تم التقاط الصورة بجودة أصلية كاملة', 'success');
+        SmartShield.checkStorage();
+    };
+    reader.readAsDataURL(file);
+};
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
@@ -9543,24 +9336,15 @@ window.renderInventory = function() {
     // إذا كان عدد المنتجات كبير، استخدم التجزئة في المرة القادمة
     if (DB.products.length > 200) {
         // سيتم تطبيق نظام التجزئة تلقائياً في المستقبل
-        console.log(`📊 المخزون يحتوي على ${DB.products.length} منتج - يُنصح بتفعيل وضع الأداء العالي`);
+
     }
 };
 
-// ج. تعديل حفظ الإصلاحات لضغط صورة الجهاز
+// ج. حفظ صورة الجهاز بدون ضغط (الجودة الأصلية)
 const originalSaveRepairShield = window.saveRepair;
 window.saveRepair = function(id) {
-    // قبل الحفظ، افحص حجم الصورة
-    if (tempRepairImage && tempRepairImage.length > 200000) {
-        SmartShield.compressImage(tempRepairImage, (compressed) => {
-            tempRepairImage = compressed;
-            originalSaveRepairShield(id);
-            SmartShield.checkStorage();
-        });
-    } else {
-        originalSaveRepairShield(id);
-        SmartShield.checkStorage();
-    }
+    originalSaveRepairShield(id);
+    SmartShield.checkStorage();
 };
 
 // تشغيل الدرع عند التحميل
@@ -9568,7 +9352,6 @@ document.addEventListener('DOMContentLoaded', () => {
     SmartShield.init();
 });
 
-console.log("🛡️ تم تحميل نظام الدرع الذكي بنجاح");
 </script>
 <!-- =========================================
      إصلاح الأخطاء الناقصة وإكمال الدوال المفقودة
@@ -9738,7 +9521,6 @@ window.completeSale = function() {
     }
 };
 
-console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوال المفقودة بنجاح');
 </script>
 <!-- =========================================
      SYSTEM GUARD - نظام الحماية والحفظ الذكي الشامل
@@ -9747,14 +9529,13 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
 <script>
 (function() {
     'use strict';
-    console.log("🛡️ System Guard: جاري تفعيل الحماية الشاملة...");
 
     // ─── إعداد Firebase Database ───
     let database = null;
     if (typeof firebase !== 'undefined') {
         try {
             database = firebase.database();
-            console.log("✅ Firebase Database متصل");
+
         } catch(e) {
             console.warn("⚠️ Firebase Database غير متوفر");
         }
@@ -9798,7 +9579,7 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
             if (currentUser && database) {
                 const userRef = database.ref('users/' + currentUser.uid + '/workshop_data');
                 userRef.set(DB).then(() => {
-                    console.log("☁️ تمت المزامنة السحابية");
+
                 }).catch(err => {
                     console.warn("⚠️ فشل الاتصال بالسحابة:", err);
                 });
@@ -9819,18 +9600,9 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
         }
     };
 
-    // ─── 3. الحماية عند مغادرة الصفحة فقط (BVC: بدون حفظ دوري) ───
-    window.addEventListener('beforeunload', (e) => {
-        window.performDeepSave(false);
-    });
+    // الحفظ عند الخروج: موحد في مستمع واحد
 
-    // ─── 5. اختصار Ctrl+S للحفظ اليدوي ───
-    document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            window.performDeepSave(true);
-        }
-    });
+    // ─── 5. اختصار Ctrl+S (موحد مع المستمع الرئيسي) ───
 
     // ─── 6. مؤشر الحفظ البصري (UI Indicator) ───
     function showSaveNotification(message, isError = false) {
@@ -9880,8 +9652,7 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
             currentUser = user;
             
             if (user) {
-                console.log("👤 مستخدم مسجل:", user.email);
-                
+
                 // محاولة استرجاع البيانات من السحابة
                 if (database) {
                     const userRef = database.ref('users/' + user.uid + '/workshop_data');
@@ -9905,28 +9676,17 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
                             }
                         }
                     }).catch(err => {
-                        console.log("لا يوجد اتصال بالسحابة أو لا توجد بيانات");
+
                     });
                 }
             } else {
-                console.log("👤 لا يوجد مستخدم مسجل");
+
             }
         });
     }
 
-    // ─── 8. إضافة طابع زمني للبيانات (للمقارنة) ───
-    // نستحوذ على saveToStorage لإضافة timestamp
-    const originalSaveToStorage = window.saveToStorage;
-    window.saveToStorage = function() {
-        DB._lastUpdated = Date.now();
-        if (originalSaveToStorage) {
-            originalSaveToStorage();
-        } else {
-            localStorage.setItem('workshop_store_db', JSON.stringify(DB));
-        }
-    };
+    // (إضافة طابع زمني: تم دمجها في الدالة الرئيسية)
 
-    console.log("✅ System Guard: النظام محمي بالكامل (حفظ تلقائي + سحابي)");
 })();
 </script>
 
@@ -9934,50 +9694,12 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
      Firebase Database SDK (مكتبة قاعدة البيانات)
      ========================================= -->
 <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js"></script>
-<!-- ============================================
-     نظام الحفظ عند الخروج فقط (BVC FIX)
-     يحفظ عند مغادرة الموقع/إغلاق التبويب فقط
-     ============================================ -->
-<script>
-(function() {
-    'use strict';
-    
-    console.log("🔄 تفعيل نظام الحفظ عند الخروج (BVC)...");
-    
-    // الحفظ عند محاولة إغلاق الصفحة أو تحديثها
-    window.addEventListener('beforeunload', function() {
-        if (typeof saveToStorage === 'function') {
-            saveToStorage();
-        }
-    });
-    
-    // الحفظ عند إخفاء التبويب (تبديل تبويب أو تصغير النافذة)
-    document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'hidden' && typeof saveToStorage === 'function') {
-            saveToStorage();
-        }
-    });
-
-    // الحفظ عند إخفاء الصفحة (دعم الهواتف)
-    window.addEventListener('pagehide', function() {
-        if (typeof saveToStorage === 'function') {
-            saveToStorage();
-        }
-    });
-    
-    console.log("✅ BVC: يحفظ فقط عند الخروج من الموقع");
-})();
-
-/*
-
-</script>
 <!-- بداية نظام الحفظ الإجباري الصارم (The Ultimate Auto-Save) -->
 <script>
 */ // هذا السطر لإغلاق التعليق المفتوح بالخطأ في نهاية كودك السابق وإصلاح النظام
 
 (function() {
     'use strict';
-    console.log("🛡️ تفعيل نظام الحفظ الإجباري الصارم (Force Auto-Save)...");
 
     // 1. الدالة الأساسية للحفظ الإجباري الصامت (بدون إشعارات مزعجة)
     const silentForceSave = function() {
@@ -9995,9 +9717,7 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
     };
 
     // 2. الحفظ عند محاولة إغلاق النافذة أو تحديث الصفحة
-    window.addEventListener('beforeunload', function(e) {
-        silentForceSave();
-    });
+    // (beforeunload: محذوف)
 
     // 3. الحفظ عند مغادرة التبويب (للجوال والكمبيوتر) - الأهم على الإطلاق
     document.addEventListener('visibilitychange', function() {
@@ -10007,11 +9727,8 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
     });
 
     // 4. الحفظ عند إخفاء الصفحة (دعم إضافي للهواتف الذكية الآيفون والأندرويد)
-    window.addEventListener('pagehide', function() {
-        silentForceSave();
-    });
+    // (pagehide: محذوف)
 
-    console.log("✅ BVC Force Save: يحفظ فقط عند الخروج.");
 })();
 </script>
 <!-- =========================================================
@@ -10021,7 +9738,6 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
 <script>
 (function() {
     'use strict';
-    console.log("🛡️ تم تفعيل درع الحفظ المطلق (تخزين غير محدود + حفظ قهري)...");
 
     // 1. إنشاء قاعدة بيانات لا نهائية (IndexedDB) لتجاوز حاجز الـ 5 ميجابايت الخاص بالـ LocalStorage
     const InfiniteStorage = {
@@ -10123,35 +9839,15 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
 
             if (needsRecovery) {
                 Object.assign(DB, recoveredData);
-                console.log("🔄 تم استرداد البيانات بنجاح من الذاكرة العميقة!");
+
                 if(typeof renderDashboard === 'function') renderDashboard();
             }
         }
     });
 
-    // 5. الحفظ الفوري والأكيد عند الخروج (Page Visibility API هي الأقوى)
-    // هذا الحدث يعمل حتى على الهواتف الذكية عندما تسحب التطبيق لإغلاقه
-    document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'hidden') {
-            forceAbsoluteSave();
-        }
-    });
+    // exit events: موحدة في مستمع واحد
 
-    window.addEventListener('pagehide', function() {
-        forceAbsoluteSave();
-    });
-
-    window.addEventListener('beforeunload', function(e) {
-        forceAbsoluteSave();
-        // لا نظهر رسالة مزعجة، فقط نحفظ البيانات بصمت
-    });
-
-    // 6. الحفظ بعد أي كتابة أو إدخال بـ 2 ثانية (Debounce)
-    let typingTimer;
-    document.addEventListener('input', function() {
-        clearTimeout(typingTimer);
-        typingTimer = setTimeout(forceAbsoluteSave, 2000);
-    });
+    // الحفظ يدوي فقط - لا مؤقتات
 
 })();
 </script>
@@ -10162,7 +9858,6 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
 <script>
 (function() {
     'use strict';
-    console.log("🛡️ الحارس الأخير يعمل: بياناتك في أمان تام ومطلق!");
 
     // دالة الحفظ الصامتة والمدمرة للأخطاء
     const absoluteForceSave = function() {
@@ -10183,16 +9878,7 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
         }
     };
 
-    // 1. الاستشعار الحساس للخروج (للهواتف والكمبيوتر)
-    const exitEvents = ['visibilitychange', 'pagehide', 'beforeunload', 'unload'];
-    exitEvents.forEach(evt => {
-        window.addEventListener(evt, function(e) {
-            // إذا كان الحدث visibilitychange، نتحقق أن المستخدم غادر الصفحة
-            if (evt === 'visibilitychange' && document.visibilityState !== 'hidden') return;
-            
-            absoluteForceSave(); // الحفظ الإجباري فوراً
-        }, { capture: true }); // capture: true تعني أن هذا الكود سينفذ قبل أي كود آخر في النظام
-    });
+    
 
     // 2. التقاط أي خطأ برمجي في النظام ومنعه من إيقاف الحفظ
     window.addEventListener('error', function(e) {
@@ -10242,7 +9928,6 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
 <script>
 (function() {
     'use strict';
-    console.log("🧠 العقل المدبر (OmniPrint & Smart Healer) بدأ العمل بصمت...");
 
     // =====================================================================
     // 1. المعالج الذكي (Smart Healer): حل صراعات الدوال المتراكمة في المشروع
@@ -10522,9 +10207,10 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
         targetCard.querySelector('.card-body').insertAdjacentHTML('beforeend', uiHTML);
     };
 
-    // مراقبة تحميل الصفحة لحقن الواجهة
+    // مراقبة تحميل الصفحة لحقن الواجهة (يوقف نفسه فور التنفيذ)
     const observer = new MutationObserver((mutations) => {
         if(document.getElementById('printer-settings-card')) {
+            observer.disconnect(); // ← إيقاف فوري بعد أول تنفيذ
             injectOmniUI();
         }
     });
@@ -10574,7 +10260,6 @@ console.log('✅ تم إصلاح جميع الأخطاء وإكمال الدوا
         };
     }
 
-    console.log("🚀 OmniPrint Engine جاهز: النظام الآن يدعم Wi-Fi, Bluetooth, USB بأمان تام.");
 })();
 
 // =====================================================================
@@ -10787,7 +10472,6 @@ html, body {
 <script>
 (function() {
     'use strict';
-    console.log("🧠 العقل المدبر (The Mother Brain) قيد التشغيل: النظام الآن في أمان تام...");
 
     // ==========================================
     // 1. الحارس البصري (Visual Guardian) - لضمان ثبات الخلفية
@@ -10802,9 +10486,8 @@ html, body {
         }
     };
     
-    // تشغيل الحارس البصري بشكل دوري خفيف لمنع أي كود قديم من تغيير الخلفية
-    setInterval(enforceBackground, 2000);
-    setTimeout(enforceBackground, 100);
+    // الحارس البصري: يعمل مرة واحدة فقط عند التحميل
+    setTimeout(enforceBackground, 300);
 
     // ==========================================
     // 2. معالج صراعات الدوال (Conflict Healer)
@@ -10878,9 +10561,39 @@ html, body {
         };
     }
 
-    console.log("🤱 اكتملت التهيئة: تم تصغير الشعار ليتناسب مع الشاشة بنسبة 100%، وجميع الدوال الآن تعمل بتناسق تام كعائلة واحدة.");
 })();
 </script>
+<!-- ====== تحسينات الأداء وتجربة المستخدم ====== -->
+<script>
+(function() {
+    'use strict';
+    // حفظ عند الخروج: موحد في مستمع واحد فقط
+    // (تم حذف الحفظ التلقائي الدوري - الحفظ يدوي فقط)
+    // Debounce للبحث
+    var dTimers = {};
+    function debounce(fn, delay, key) {
+        return function() { var a=arguments,c=this; clearTimeout(dTimers[key]); dTimers[key]=setTimeout(function(){fn.apply(c,a);},delay); };
+    }
+    var si = {'pos-search':'filterPosProducts','inv-search':'filterInventory','workshop-search':'filterWorkshop','cust-search':'filterCustomers','loss-search':'filterLosses'};
+    Object.keys(si).forEach(function(id) {
+        var el = document.getElementById(id), fn = si[id];
+        if (el && typeof window[fn] === 'function') {
+            var d = debounce(window[fn], 250, id);
+            el.removeAttribute('oninput');
+            el.addEventListener('input', d);
+        }
+    });
+    // دالة عرض مجزأ
+    window.renderBatch = function(start, end, items, container, renderFn) {
+        var f = document.createDocumentFragment();
+        for (var i=start; i<end && i<items.length; i++) { var e=renderFn(items[i]); if(e) f.appendChild(e); }
+        container.appendChild(f);
+        if (end<items.length) requestAnimationFrame(function(){renderBatch(end,end+50,items,container,renderFn);});
+    };
+
+})();
+</script>
+
 </body>
 </html>
 
