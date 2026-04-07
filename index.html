@@ -2366,63 +2366,50 @@ function markAsDamaged(id) {
 function printRepairTicket(id) {
   const r = DB.repairs.find(x => x.id === id);
   if (!r) return;
-  
-  const totalPrice = r.labor + (r.parts?.reduce((a, p) => a + p.sellPrice, 0) || 0);
-  
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html dir="rtl">
-    <head>
-      <meta charset="UTF-8">
-      <title>وصل استلام - ${r.machine}</title>
-      <style>
-        body { font-family: Arial, sans-serif; width: 80mm; padding: 10mm; margin: 0; }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-        .header h2 { margin: 0; font-size: 18px; }
-        .header p { margin: 5px 0; font-size: 11px; }
-        .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #ccc; }
-        .total { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-weight: bold; font-size: 16px; }
-        .footer { text-align: center; margin-top: 20px; font-size: 10px; color: #666; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h2>${DB.settings.storeName}</h2>
-        <p>وصل استلام جهاز للإصلاح</p>
-        <p>رقم: ${r.id.toString().slice(-6)}</p>
-      </div>
-      <div class="row"><span>التاريخ:</span><span>${fmtDate(r.date)}</span></div>
-      <div class="row"><span>الزبون:</span><span>${r.customer}</span></div>
-      <div class="row"><span>الهاتف:</span><span>${r.phone || '--'}</span></div>
-      <div class="row"><span>الجهاز:</span><span>${r.machine}</span></div>
-      <div class="row"><span>العطل:</span><span>${r.desc || '--'}</span></div>
-      <div class="row"><span>اليد العاملة:</span><span>${fmt(r.labor)}</span></div>
-      ${r.parts?.map(p => `<div class="row"><span>${p.name}:</span><span>${fmt(p.sellPrice)}</span></div>`).join('') || ''}
-      <div class="total row"><span>الإجمالي:</span><span>${fmt(totalPrice)} ${DB.settings.currency}</span></div>
-      <div class="footer">
-        <p>شكراً لتعاملكم معنا</p>
-        <p>الضمان يسري على القطع المستبدلة لمدة 7 أيام</p>
-      </div>
-    
-<!-- (تم حذف الحفظ التلقائي عند الخروج - الحفظ يدوي فقط) -->
-</body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.print();
+  const storeName = DB.settings?.storeName || 'المتجر';
+  const currency = DB.settings?.currency || 'دج';
+  const partsTotal = r.parts ? r.parts.reduce((a,p) => a + p.sellPrice, 0) : 0;
+  const total = r.labor + partsTotal;
+  const w = window.open('', '_blank', 'width=400,height=500');
+  w.document.write('<html dir="rtl"><head><meta charset="UTF-8"><title>بطاقة إصلاح</title><style>body{font-family:Cairo,Tajawal,sans-serif;padding:20px;font-size:13px;direction:rtl}h2{text-align:center;margin:0 0 4px}.divider{border-top:1px dashed #999;margin:10px 0}.row{display:flex;justify-content:space-between;padding:4px 0}@media print{body{padding:10px}}</style></head><body>');
+  w.document.write('<h2>' + storeName + '</h2><p style="text-align:center;color:#666;margin:4px 0">بطاقة إصلاح</p><div class="divider"></div>');
+  w.document.write('<div class="row"><span>الجهاز:</span><strong>' + r.machine + '</strong></div>');
+  w.document.write('<div class="row"><span>العميل:</span><strong>' + r.customer + '</strong></div>');
+  if (r.phone) w.document.write('<div class="row"><span>الهاتف:</span><strong>' + r.phone + '</strong></div>');
+  if (r.problem) w.document.write('<div class="row"><span>المشكلة:</span><span>' + r.problem + '</span></div>');
+  w.document.write('<div class="divider"></div>');
+  w.document.write('<div class="row"><span>أجرة العمل:</span><span>' + _fmtP(r.labor) + ' ' + currency + '</span></div>');
+  if (r.parts && r.parts.length) {
+    r.parts.forEach(function(p) { w.document.write('<div class="row"><span>' + p.name + '</span><span>' + _fmtP(p.sellPrice) + ' ' + currency + '</span></div>'); });
+  }
+  w.document.write('<div class="divider"></div><div class="row" style="font-size:18px;font-weight:900"><span>الإجمالي</span><span>' + _fmtP(total) + ' ' + currency + '</span></div>');
+  w.document.write('<div style="text-align:center;margin-top:16px;font-size:11px;color:#999">' + new Date().toLocaleString('ar-DZ') + '</div></body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+  toast('جاري الطباعة...', 'info');
 }
 
 function printWorkshopReport() {
-  window.print();
-}
-
-
-// ==================== LOSSES MODULE ====================
-function renderLosses() {
-  const totalLosses = DB.losses.reduce((a, l) => a + l.amount, 0);
-  document.getElementById('page-total-loss').textContent = fmt(totalLosses) + ' ' + DB.settings.currency;
-  filterLosses();
+  const storeName = DB.settings?.storeName || 'المتجر';
+  const currency = DB.settings?.currency || 'دج';
+  const w = window.open('', '_blank', 'width=500,height=600');
+  w.document.write('<html dir="rtl"><head><meta charset="UTF-8"><title>تقرير الورشة</title><style>body{font-family:Cairo,Tajawal,sans-serif;padding:20px;font-size:13px;direction:rtl}h2{text-align:center}table{width:100%;border-collapse:collapse}th,td{padding:6px;border:1px solid #ddd;text-align:right;font-size:12px}th{background:#f3f4f6}@media print{body{padding:10px}}</style></head><body>');
+  w.document.write('<h2>تقرير الورشة - ' + storeName + '</h2><p style="text-align:center;color:#666">' + new Date().toLocaleDateString('ar-DZ') + '</p>');
+  const stats = {pending:0,in_progress:0,done:0,delivered:0,damaged:0};
+  DB.repairs.forEach(r => stats[r.status] = (stats[r.status]||0)+1);
+  w.document.write('<div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">');
+  [['في الانتظار',stats.pending,'#f59e0b'],['قيد العمل',stats.in_progress,'#3b82f6'],['جاهز',stats.done,'#059669'],['مسلّم',stats.delivered,'#6b7280']].forEach(function(s){ w.document.write('<div style="flex:1;padding:10px;border-radius:8px;text-align:center;background:'+s[2]+'15;color:'+s[2]+'"><div style="font-size:20px;font-weight:900">'+s[1]+'</div><div style="font-size:11px">'+s[0]+'</div></div>'); });
+  w.document.write('</div>');
+  w.document.write('<table><thead><tr><th>الجهاز</th><th>العميل</th><th>الحالة</th><th>الإجمالي</th></tr></thead><tbody>');
+  DB.repairs.forEach(function(r) {
+    var pt = r.parts ? r.parts.reduce(function(a,p){return a+p.sellPrice},0) : 0;
+    var statusText = r.status==='delivered'?'مسلّم':r.status==='done'?'جاهز':r.status==='in_progress'?'قيد العمل':'انتظار';
+    w.document.write('<tr><td>'+r.machine+'</td><td>'+r.customer+'</td><td>'+statusText+'</td><td>'+_fmtP(r.labor+pt)+' '+currency+'</td></tr>');
+  });
+  w.document.write('</tbody></table></body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+  toast('جاري الطباعة...', 'info');
 }
 
 function filterLosses() {
@@ -2512,7 +2499,21 @@ function deleteLoss(id) {
 }
 
 function printLossesReport() {
-  window.print();
+  const storeName = DB.settings?.storeName || 'المتجر';
+  const currency = DB.settings?.currency || 'دج';
+  const totalLosses = DB.losses.reduce((a, l) => a + l.amount, 0);
+  const w = window.open('', '_blank', 'width=500,height=600');
+  w.document.write('<html dir="rtl"><head><meta charset="UTF-8"><title>تقرير الخسائر</title><style>body{font-family:Cairo,Tajawal,sans-serif;padding:20px;font-size:13px;direction:rtl}h2{text-align:center}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid #ddd;text-align:right}th{background:#fef2f2;color:#991b1b}@media print{body{padding:10px}}</style></head><body>');
+  w.document.write('<h2>تقرير الخسائر - ' + storeName + '</h2><p style="text-align:center;color:#666">' + new Date().toLocaleDateString('ar-DZ') + '</p>');
+  w.document.write('<div style="text-align:center;background:#fef2f2;padding:14px;border-radius:8px;margin:16px 0"><div style="font-size:12px;color:#991b1b">إجمالي الخسائر</div><div style="font-size:24px;font-weight:900;color:#dc2626">' + _fmtP(totalLosses) + ' ' + currency + '</div></div>');
+  w.document.write('<table><thead><tr><th>التاريخ</th><th>النوع</th><th>الوصف</th><th>القيمة</th></tr></thead><tbody>');
+  DB.losses.forEach(function(l) {
+    w.document.write('<tr><td>' + new Date(l.date).toLocaleDateString('ar-DZ') + '</td><td>' + (l.type || '--') + '</td><td>' + (l.description || '--') + '</td><td style="color:#dc2626;font-weight:700">' + _fmtP(l.amount) + ' ' + currency + '</td></tr>');
+  });
+  w.document.write('</tbody></table></body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+  toast('جاري طباعة تقرير الخسائر...', 'info');
 }
 
 // ==================== POS MODULE ====================
@@ -2541,10 +2542,11 @@ function renderPosProducts(catFilter = '') {
   });
 
   grid.innerHTML = products.map(p => `
-    <div class="product-card" onclick="addToCart('${p.id}')">
+    <div class="product-card" onclick="addToCart('${p.id}')" style="position:relative">
+      ${p.is_scale ? '<div class="scale-badge"><i class="fas fa-balance-scale"></i> ميزان</div>' : ''}
       <div class="product-img">${p.image ? `<img src="${p.image}" alt="${p.name}">` : `<span style="font-size:40px">${p.emoji}</span>`}</div>
       <div class="product-name">${p.name}</div>
-      <div class="product-price">${fmt(p.selling_price)}</div>
+      <div class="product-price">${p.is_scale ? fmt(p.scale_price) + '/' + (p.scale_unit === 'g' ? 'غ' : p.scale_unit === 'lb' ? 'رطل' : 'كجم') : fmt(p.selling_price)}</div>
       <div class="product-stock ${p.current_stock <= p.min_stock ? 'low' : ''}">متوفر: ${p.current_stock}</div>
       <div class="add-btn"><i class="fas fa-plus-circle"></i></div>
     </div>
@@ -2605,12 +2607,8 @@ function renderCart() {
     <div class="cart-item" data-idx="${idx}">
       <div class="cart-item-img">${item.product_image ? `<img src="${item.product_image}" alt="${item.product_name}">` : `<span style="font-size:22px">${item.product_emoji}</span>`}</div>
       <div class="cart-item-info"><div class="cart-item-name">${item.product_name}</div><div class="cart-item-price">${fmt(item.unit_price)}</div></div>
-      <div class="cart-item-qty">
-        <button class="qty-btn" onclick="changeQty(${idx}, -1)">-</button>
-        <input type="number" class="qty-input" value="${item.quantity}" onchange="setQty(${idx}, this.value)">
-        <button class="qty-btn" onclick="changeQty(${idx}, 1)">+</button>
-      </div>
-      <div class="cart-item-total">${fmt(item.quantity * item.unit_price)}</div>
+      ${item._is_scale_item ? '<div class="cart-item-qty" style="font-size:11px;color:#d97706;font-weight:600;display:flex;align-items:center;gap:4px"><i class="fas fa-balance-scale" style="font-size:10px"></i>' + (item._scale_weight || 0).toFixed(2) + ' ' + (item._scale_unit === 'g' ? 'غ' : item._scale_unit === 'lb' ? 'رطل' : 'كجم') + '</div>' : '<div class="cart-item-qty"><button class="qty-btn" onclick="changeQty(' + idx + ', -1)">-</button><input type="number" class="qty-input" value="' + item.quantity + '" onchange="setQty(' + idx + ', this.value)"><button class="qty-btn" onclick="changeQty(' + idx + ', 1)">+</button></div>'}
+      <div class="cart-item-total">${fmt(item.total_price)}</div>
       <button class="cart-item-del" onclick="removeFromCart(${idx})"><i class="fas fa-times"></i></button>
     </div>
   `).join('');
@@ -2674,7 +2672,7 @@ function recalcCart() {
   document.getElementById('cart-discount-display').textContent = fmt(discount);
   document.getElementById('cart-total').textContent = fmt(total);
 
-  const profit = cart.reduce((a, i) => a + (i.unit_price - i.cost_price) * i.quantity, 0) - discount;
+  const profit = cart.reduce((a, i) => { if (i._is_scale_item) return a + (i.unit_price - i.cost_price); return a + (i.unit_price - i.cost_price) * i.quantity; }, 0) - discount;
   const profitContainer = document.getElementById('profit-bar-container');
   profitContainer.innerHTML = `<div class="profit-bar ${profit < 0 ? 'negative' : ''}"><i class="fas fa-coins"></i><span>الربح الصافي المتوقع: <strong>${fmt(profit)}</strong></span></div>`;
 }
@@ -2695,11 +2693,12 @@ function completeSale() {
   const discount = discountType === 'percent' ? subtotal * (discountVal / 100) : discountVal;
   const tax = subtotal * (DB.settings.taxRate / 100);
   const total = subtotal + tax - discount;
-  const profit = cart.reduce((a, i) => a + (i.unit_price - i.cost_price) * i.quantity, 0) - discount;
+  const profit = cart.reduce((a, i) => { if (i._is_scale_item) return a + (i.unit_price - i.cost_price); return a + (i.unit_price - i.cost_price) * i.quantity; }, 0) - discount;
   const customerName = document.getElementById('cart-customer-input')?.value?.trim();
   const paymentMethod = getPaymentMethod();
 
   cart.forEach(item => {
+    if (item._is_scale_item) return; // scale items handled by ScaleSystem
     const p = DB.products.find(x => x.id === item.product_id);
     if (p) {
       p.current_stock -= item.quantity;
@@ -2792,7 +2791,7 @@ function filterInventory() {
         <td><input type="checkbox" onchange="toggleSelectProduct('${p.id}', this.checked)"></td>
         <td><div class="td-img">${p.image ? `<img src="${p.image}" alt="${p.name}">` : `<span style="font-size:22px">${p.emoji}</span>`}</div></td>
         <td>${p.sku || '--'}</td>
-        <td><strong>${p.name}</strong></td>
+        <td><strong>${p.name}</strong>${p.is_scale ? ' <span style="font-size:11px;color:#d97706;vertical-align:middle" title="بيع بالميزان">⚖️</span>' : ''}</td>
         <td>${cat ? cat.emoji + ' ' + cat.name : '--'}</td>
         <td>${fmt(p.purchase_price)}</td>
         <td>${fmt(p.selling_price)}</td>
@@ -2851,6 +2850,30 @@ function openProductModal(id = null) {
     <div class="form-row">
       <div class="form-group"><label class="form-label">المخزون الحالي</label><input type="number" class="form-control" id="p-stock" value="${p?.current_stock || 0}" min="0"></div>
       <div class="form-group"><label class="form-label">الحد الأدنى</label><input type="number" class="form-control" id="p-min" value="${p?.min_stock || 5}" min="0"></div>
+    </div>
+    <div id="scale-toggle-wrap" style="margin-top:8px;">
+      <div class="scale-toggle-container ${p?.is_scale ? 'active' : ''}" onclick="ScaleSystem.toggleScaleInForm(this)">
+        <div class="scale-toggle-icon">⚖️</div>
+        <div class="scale-toggle-label">بيع بالميزان (بالوزن)</div>
+        <div class="scale-toggle-switch"></div>
+        <input type="hidden" id="p-is-scale" value="${p?.is_scale ? '1' : '0'}">
+      </div>
+      <div class="scale-fields ${p?.is_scale ? 'visible' : ''}" id="scale-fields-container">
+        <div style="margin-bottom:12px;font-size:12px;color:#92400e;font-weight:600;">
+          <i class="fas fa-info-circle"></i> حدد وحدة الوزن وسعرها
+        </div>
+        <label class="form-label">وحدة الميزان</label>
+        <div class="scale-unit-selector">
+          <div class="scale-unit-btn ${(p?.scale_unit||'kg')==='kg'?'active':''}" onclick="ScaleSystem.selectUnit(this,'kg')"><i class="fas fa-weight-hanging"></i><br>كيلوغرام</div>
+          <div class="scale-unit-btn ${p?.scale_unit==='g'?'active':''}" onclick="ScaleSystem.selectUnit(this,'g')"><i class="fas fa-weight-hanging"></i><br>غرام</div>
+          <div class="scale-unit-btn ${p?.scale_unit==='lb'?'active':''}" onclick="ScaleSystem.selectUnit(this,'lb')"><i class="fas fa-weight-hanging"></i><br>رطل</div>
+        </div>
+        <input type="hidden" id="p-scale-unit" value="${p?.scale_unit||'kg'}">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label"><i class="fas fa-tag" style="color:#f59e0b"></i> سعر الوحدة</label><input type="number" class="form-control" id="p-scale-price" value="${p?.scale_price||''}" min="0" step="0.01" placeholder="سعر الكيلو مثلا"></div>
+          <div class="form-group"><label class="form-label"><i class="fas fa-boxes" style="color:#f59e0b"></i> وزن = 1 وحدة مخزون</label><input type="number" class="form-control" id="p-scale-per-unit" value="${p?.scale_per_unit||''}" min="0.01" step="0.01" placeholder="مثلا 100 كجم"></div>
+        </div>
+      </div>
     </div>
     <div class="form-group"><label class="form-label">الوصف</label><textarea class="form-control" id="p-desc" rows="2">${p?.description || ''}</textarea></div>
   `, `<button class="btn btn-secondary" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProduct('${id || ''}')"><i class="fas fa-save"></i> حفظ</button>`);
@@ -3301,9 +3324,75 @@ function showSaleDetails(id) {
   `, `<button class="btn btn-primary" onclick="printInvoice('${s.id}')"><i class="fas fa-print"></i> طباعة</button><button class="btn btn-secondary" onclick="closeModal()">إغلاق</button>`);
 }
 
-function printInvoice(id) { toast('جاري الطباعة...', 'info'); window.print(); }
-function printReport() { toast('جاري الطباعة...', 'info'); window.print(); }
-function printWorkshopFullReport() { toast('جاري الطباعة...', 'info'); window.print(); }
+function printInvoice(id) {
+  const s = DB.sales.find(x => x.id === id);
+  if (!s) { toast('الفاتورة غير موجودة!', 'error'); return; }
+  const storeName = DB.settings?.storeName || 'المتجر';
+  const currency = DB.settings?.currency || 'دج';
+  const now = new Date(s.created_at);
+  const itemsHTML = s.items.map(i => {
+    const isScale = i._is_scale_item;
+    const qtyText = isScale ? (_fmtP(i._scale_weight) + ' ' + (i._scale_unit === 'g' ? 'غ' : i._scale_unit === 'lb' ? 'رطل' : 'كجم')) : ('x' + i.quantity);
+    return '<tr><td style="padding:6px 4px;border-bottom:1px solid #eee;text-align:right">' + i.product_name + '</td><td style="padding:6px 4px;border-bottom:1px solid #eee;text-align:center">' + qtyText + '</td><td style="padding:6px 4px;border-bottom:1px solid #eee;text-align:left">' + _fmtP(i.total_price) + ' ' + currency + '</td></tr>';
+  }).join('');
+  const w = window.open('', '_blank', 'width=400,height=600');
+  w.document.write('<html dir="rtl"><head><meta charset="UTF-8"><title>فاتورة</title><style>body{font-family:Cairo,Tajawal,sans-serif;margin:0;padding:20px;font-size:13px;direction:rtl}h2{margin:0 0 4px;font-size:18px}table{width:100%;border-collapse:collapse;margin:12px 0}.total-row{font-size:16px;font-weight:900;border-top:2px solid #333;padding-top:8px;margin-top:8px}.divider{border-top:1px dashed #999;margin:10px 0}.footer{text-align:center;font-size:11px;color:#999;margin-top:16px}@media print{body{padding:10px}}</style></head><body>');
+  w.document.write('<div style="text-align:center"><h2>' + storeName + '</h2><p style="margin:4px 0;font-size:12px;color:#666">فاتورة بيع #' + s.invoice_number + '</p><p style="font-size:11px;color:#999">' + now.toLocaleString('ar-DZ') + '</p></div>');
+  if (s.customer_name) w.document.write('<p style="margin:8px 0"><strong>العميل:</strong> ' + s.customer_name + '</p>');
+  w.document.write('<div class="divider"></div><table><thead><tr><th style="text-align:right;padding:6px 4px;border-bottom:2px solid #333">الصنف</th><th style="text-align:center;padding:6px 4px;border-bottom:2px solid #333">الكمية</th><th style="text-align:left;padding:6px 4px;border-bottom:2px solid #333">السعر</th></tr></thead><tbody>' + itemsHTML + '</tbody></table>');
+  w.document.write('<div class="divider"></div>');
+  w.document.write('<div style="display:flex;justify-content:space-between;padding:4px 0"><span>المجموع الفرعي</span><span>' + _fmtP(s.subtotal) + ' ' + currency + '</span></div>');
+  if (s.discount > 0) w.document.write('<div style="display:flex;justify-content:space-between;padding:4px 0;color:#dc2626"><span>الخصم</span><span>-' + _fmtP(s.discount) + ' ' + currency + '</span></div>');
+  if (s.tax > 0) w.document.write('<div style="display:flex;justify-content:space-between;padding:4px 0"><span>الضريبة</span><span>' + _fmtP(s.tax) + ' ' + currency + '</span></div>');
+  w.document.write('<div class="total-row" style="display:flex;justify-content:space-between"><span>الإجمالي</span><span>' + _fmtP(s.total) + ' ' + currency + '</span></div>');
+  w.document.write('<div style="text-align:center;margin-top:8px;font-size:12px;color:#666">طريقة الدفع: ' + (s.payment_method === 'cash' ? 'نقدي' : s.payment_method === 'card' ? 'بطاقة' : s.payment_method === 'credit' ? 'آجل' : s.payment_method) + '</div>');
+  w.document.write('<div class="footer">شكراً لتعاملكم معنا ❤️</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+  toast('جاري الطباعة...', 'info');
+}
+
+function _fmtP(n) { return (n || 0).toLocaleString('ar-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+function printReport() {
+  const storeName = DB.settings?.storeName || 'المتجر';
+  const currency = DB.settings?.currency || 'دج';
+  const totalSales = DB.sales.reduce((a, s) => a + s.total, 0);
+  const totalExpenses = DB.expenses?.reduce((a, e) => a + e.amount, 0) || 0;
+  const salesCount = DB.sales.length;
+  const w = window.open('', '_blank', 'width=500,height=700');
+  w.document.write('<html dir="rtl"><head><meta charset="UTF-8"><title>تقرير</title><style>body{font-family:Cairo,Tajawal,sans-serif;padding:20px;font-size:13px;direction:rtl}h2{text-align:center}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid #ddd;text-align:right}th{background:#f3f4f6}@media print{body{padding:10px}}</style></head><body>');
+  w.document.write('<h2>تقرير المبيعات - ' + storeName + '</h2><p style="text-align:center;color:#666">' + new Date().toLocaleDateString('ar-DZ') + '</p>');
+  w.document.write('<div style="display:flex;gap:16px;margin:16px 0;flex-wrap:wrap"><div style="flex:1;background:#ecfdf5;padding:14px;border-radius:8px;text-align:center"><div style="font-size:12px;color:#666">إجمالي المبيعات</div><div style="font-size:22px;font-weight:900;color:#059669">' + _fmtP(totalSales) + ' ' + currency + '</div></div><div style="flex:1;background:#eff6ff;padding:14px;border-radius:8px;text-align:center"><div style="font-size:12px;color:#666">عدد الفواتير</div><div style="font-size:22px;font-weight:900;color:#1a56db">' + salesCount + '</div></div></div>');
+  w.document.write('<table><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>العميل</th><th>الإجمالي</th><th>الدفع</th></tr></thead><tbody>');
+  DB.sales.slice(-50).reverse().forEach(function(s) {
+    w.document.write('<tr><td>' + s.invoice_number + '</td><td>' + new Date(s.created_at).toLocaleDateString('ar-DZ') + '</td><td>' + (s.customer_name || 'زبون عادي') + '</td><td>' + _fmtP(s.total) + '</td><td>' + (s.payment_method === 'cash' ? 'نقدي' : s.payment_method === 'card' ? 'بطاقة' : 'آجل') + '</td></tr>');
+  });
+  w.document.write('</tbody></table></body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+  toast('جاري الطباعة...', 'info');
+}
+
+function printWorkshopFullReport() {
+  const storeName = DB.settings?.storeName || 'المتجر';
+  const currency = DB.settings?.currency || 'دج';
+  const w = window.open('', '_blank', 'width=500,height=700');
+  w.document.write('<html dir="rtl"><head><meta charset="UTF-8"><title>تقرير الورشة</title><style>body{font-family:Cairo,Tajawal,sans-serif;padding:20px;font-size:13px;direction:rtl}h2{text-align:center}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid #ddd;text-align:right}th{background:#f3f4f6}.status-done{color:#059669;font-weight:700}.status-pending{color:#f59e0b;font-weight:700}@media print{body{padding:10px}}</style></head><body>');
+  w.document.write('<h2>تقرير الورشة - ' + storeName + '</h2><p style="text-align:center;color:#666">' + new Date().toLocaleDateString('ar-DZ') + '</p>');
+  w.document.write('<table><thead><tr><th>الجهاز</th><th>العميل</th><th>المشكلة</th><th>الحالة</th><th>الإجمالي</th></tr></thead><tbody>');
+  DB.repairs.forEach(function(r) {
+    var partsTotal = r.parts ? r.parts.reduce(function(a,p){ return a + p.sellPrice; }, 0) : 0;
+    var total = r.labor + partsTotal;
+    var statusText = r.status === 'delivered' ? 'تم التسليم' : r.status === 'done' ? 'جاهز' : r.status === 'in_progress' ? 'قيد العمل' : 'في الانتظار';
+    w.document.write('<tr><td>' + r.machine + '</td><td>' + r.customer + '</td><td>' + (r.problem || '--') + '</td><td>' + statusText + '</td><td>' + _fmtP(total) + ' ' + currency + '</td></tr>');
+  });
+  w.document.write('</tbody></table></body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+  toast('جاري الطباعة...', 'info');
+}
 
 function exportReportCSV(type = 'sales') {
   let csv = '\uFEFF';
@@ -5131,7 +5220,7 @@ setTimeout(updateProjectLogo, 500);
                 <td><input type="checkbox" onchange="toggleSelectProduct('${p.id}', this.checked)"></td>
                 <td><div class="td-img">${p.image ? `<img src="${p.image}" alt="${p.name}">` : `<span style="font-size:22px">${p.emoji}</span>`}</div></td>
                 <td>${p.sku || '--'}</td>
-                <td><strong>${p.name}</strong></td>
+                <td><strong>${p.name}</strong>${p.is_scale ? ' <span style="font-size:11px;color:#d97706;vertical-align:middle" title="بيع بالميزان">⚖️</span>' : ''}</td>
                 <td>${catObj ? catObj.emoji + ' ' + catObj.name : '--'}</td>
                 <td>${fmt(p.purchase_price)}</td>
                 <td>${fmt(p.selling_price)}</td>
@@ -10592,6 +10681,923 @@ html, body {
     };
 
 })();
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- نظام الميزان الذكي - Scale Selling System v2.0                              -->
+<!-- هذا السكريبت يُضاف فقط - لا يحذف أو يعدل أي كود موجود                      -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<style>
+/* ========== أنماط نظام الميزان ========== */
+.scale-toggle-container {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 10px;
+  border: 1.5px solid #f59e0b; margin-top: 10px; cursor: pointer;
+  transition: all 0.25s ease;
+}
+.scale-toggle-container:hover { box-shadow: 0 4px 15px rgba(245,158,11,0.25); }
+.scale-toggle-container.active { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.scale-toggle-container.active .scale-toggle-label { color: #fff; }
+.scale-toggle-switch {
+  position: relative; width: 48px; height: 26px; background: #d1d5db;
+  border-radius: 13px; transition: 0.3s; flex-shrink: 0;
+}
+.scale-toggle-switch::after {
+  content: ''; position: absolute; top: 3px; right: 3px; width: 20px; height: 20px;
+  background: #fff; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.scale-toggle-container.active .scale-toggle-switch { background: #fff; }
+.scale-toggle-container.active .scale-toggle-switch::after { right: 25px; background: #f59e0b; }
+.scale-toggle-label { font-weight: 700; font-size: 14px; color: #92400e; }
+.scale-toggle-icon { font-size: 22px; }
+
+/* حقول الميزان */
+.scale-fields {
+  display: none; margin-top: 12px; padding: 16px; background: #fffbeb;
+  border-radius: 10px; border: 1.5px dashed #fbbf24;
+  animation: scaleFieldsIn 0.3s ease;
+}
+.scale-fields.visible { display: block; }
+@keyframes scaleFieldsIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.scale-fields .form-row { margin-bottom: 10px; }
+.scale-unit-selector { display: flex; gap: 8px; margin-bottom: 12px; }
+.scale-unit-btn {
+  flex: 1; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px;
+  background: #fff; cursor: pointer; text-align: center; font-family: 'Cairo', sans-serif;
+  font-weight: 700; font-size: 13px; transition: 0.2s; color: #374151;
+}
+.scale-unit-btn:hover { border-color: #f59e0b; background: #fffbeb; }
+.scale-unit-btn.active { border-color: #f59e0b; background: #f59e0b; color: #fff; }
+
+/* نافذة إدخال وزن البيع */
+.scale-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000;
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.scale-modal-overlay.open { display: flex; }
+.scale-modal {
+  background: #fff; border-radius: 20px; width: 100%; max-width: 440px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.3); overflow: hidden;
+  animation: scaleModalIn 0.35s ease;
+}
+@keyframes scaleModalIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.scale-modal-header {
+  background: linear-gradient(135deg, #f59e0b, #d97706); padding: 20px 24px;
+  color: #fff; display: flex; align-items: center; justify-content: space-between;
+}
+.scale-modal-header h3 { font-size: 18px; font-weight: 800; margin: 0; }
+.scale-modal-close {
+  width: 36px; height: 36px; border: none; background: rgba(255,255,255,0.2);
+  border-radius: 50%; color: #fff; font-size: 18px; cursor: pointer; transition: 0.2s;
+}
+.scale-modal-close:hover { background: rgba(255,255,255,0.4); }
+.scale-modal-body { padding: 24px; }
+.scale-product-info {
+  display: flex; align-items: center; gap: 14px; padding: 14px;
+  background: #fffbeb; border-radius: 12px; margin-bottom: 20px; border: 1px solid #fde68a;
+}
+.scale-product-emoji { font-size: 36px; }
+.scale-product-details h4 { font-size: 16px; font-weight: 800; margin: 0 0 4px; color: #1f2937; }
+.scale-product-details p { font-size: 13px; color: #6b7280; margin: 0; }
+.scale-weight-input-group {
+  position: relative; margin-bottom: 16px;
+}
+.scale-weight-input {
+  width: 100%; padding: 18px 80px 18px 20px; border: 2.5px solid #e5e7eb;
+  border-radius: 14px; font-size: 28px; font-weight: 800; text-align: center;
+  font-family: 'Cairo', sans-serif; color: #1f2937; outline: none; transition: 0.2s;
+  background: #f9fafb;
+}
+.scale-weight-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,0.15); background: #fff; }
+.scale-weight-unit {
+  position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+  font-size: 16px; font-weight: 700; color: #f59e0b; background: #fffbeb;
+  padding: 4px 12px; border-radius: 8px;
+}
+.scale-quick-weights {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px;
+}
+.scale-quick-btn {
+  padding: 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: #fff;
+  cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 13px;
+  color: #374151; transition: 0.2s; text-align: center;
+}
+.scale-quick-btn:hover { border-color: #f59e0b; background: #fffbeb; color: #d97706; }
+.scale-price-summary {
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5); padding: 16px;
+  border-radius: 12px; border: 1px solid #a7f3d0; margin-bottom: 16px;
+}
+.scale-price-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0; font-size: 14px; color: #374151;
+}
+.scale-price-row.total { font-size: 20px; font-weight: 900; color: #059669; border-top: 2px solid #a7f3d0; padding-top: 10px; margin-top: 6px; }
+.scale-modal-actions {
+  display: flex; gap: 10px; padding: 16px 24px; border-top: 1px solid #e5e7eb;
+}
+.scale-modal-actions .btn { flex: 1; padding: 14px; font-size: 15px; border-radius: 12px; }
+
+/* شارة الميزان على بطاقة المنتج */
+.scale-badge {
+  position: absolute; top: 8px; left: 8px; background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px;
+  display: flex; align-items: center; gap: 4px; z-index: 2;
+  box-shadow: 0 2px 6px rgba(245,158,11,0.3);
+}
+.scale-badge i { font-size: 10px; }
+
+/* شارة الميزان في السلة */
+.cart-scale-info {
+  font-size: 11px; color: #d97706; font-weight: 600; display: flex;
+  align-items: center; gap: 4px; margin-top: 2px;
+}
+
+/* زر فساد الميزان */
+.scale-spoil-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+  background: linear-gradient(135deg, #fecaca, #fca5a5); border: 1.5px solid #f87171;
+  border-radius: 8px; color: #991b1b; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: 'Cairo', sans-serif; transition: 0.2s;
+}
+.scale-spoil-btn:hover { background: linear-gradient(135deg, #f87171, #ef4444); color: #fff; }
+
+/* طباعة فاتورة الميزان */
+/* print handled via separate window */
+.scale-invoice-print {
+  display: none; font-family: 'Cairo', monospace; max-width: 300px;
+  margin: 0 auto; padding: 20px; direction: rtl; font-size: 12px;
+}
+.scale-invoice-print .inv-header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 10px; margin-bottom: 10px; }
+.scale-invoice-print .inv-header h2 { font-size: 16px; margin: 0 0 4px; }
+.scale-invoice-print .inv-row { display: flex; justify-content: space-between; padding: 3px 0; }
+.scale-invoice-print .inv-divider { border-top: 1px dashed #999; margin: 8px 0; }
+.scale-invoice-print .inv-total { font-size: 16px; font-weight: 900; }
+</style>
+
+<!-- نافذة إدخال الوزن عند البيع -->
+<div class="scale-modal-overlay" id="scale-sell-overlay">
+  <div class="scale-modal">
+    <div class="scale-modal-header">
+      <h3><i class="fas fa-balance-scale"></i> بيع بالميزان</h3>
+      <button class="scale-modal-close" onclick="ScaleSystem.closeWeightModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="scale-modal-body" id="scale-modal-body"></div>
+    <div class="scale-modal-actions" id="scale-modal-actions"></div>
+  </div>
+</div>
+
+<!-- نافذة فساد منتج بالوزن -->
+<div class="scale-modal-overlay" id="scale-spoil-overlay">
+  <div class="scale-modal">
+    <div class="scale-modal-header" style="background:linear-gradient(135deg,#ef4444,#dc2626)">
+      <h3><i class="fas fa-trash-alt"></i> تسجيل فساد بالوزن</h3>
+      <button class="scale-modal-close" onclick="ScaleSystem.closeSpoilModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="scale-modal-body" id="scale-spoil-body"></div>
+    <div class="scale-modal-actions" id="scale-spoil-actions"></div>
+  </div>
+</div>
+
+<!-- حاوية طباعة فاتورة الميزان -->
+<div class="scale-invoice-print" id="scale-invoice-print"></div>
+
+<script>
+/**
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║   نظام الميزان الذكي - Smart Scale Selling System v2.0         ║
+ * ║   يُضاف بدون حذف أو تعديل أي كود موجود                        ║
+ * ║   يعمل بالاستدعاء الذكي للدوال الموجودة                        ║
+ * ╚══════════════════════════════════════════════════════════════════╝
+ *
+ * المنطق:
+ * - المنتج يمكن أن يكون "مرتبط بميزان" (is_scale = true)
+ * - وحدة الميزان: كيلوغرام، غرام، أو رطل
+ * - سعر الميزان: سعر الوحدة الواحدة (مثلاً: سعر الكيلو)
+ * - كمية الميزان لكل وحدة مخزون: مثلاً 100 كجم = 1 وحدة مخزون
+ * - عند إضافة منتج ميزان للسلة: تفتح نافذة لتحديد الوزن
+ * - عند البيع: يُنقص الوزن من الميزان ويُعاد حساب المخزون
+ * - الفساد: يمكن تسجيل وزن فاسد يُحسب كخسارة
+ */
+
+window.ScaleSystem = (function() {
+    'use strict';
+
+    // ==================== الأدوات المساعدة ====================
+    const _fmt = (n) => (n || 0).toLocaleString('ar-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const _uid = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 7);
+
+    const UNITS = {
+        kg: { label: 'كيلوغرام', short: 'كجم', icon: 'fa-weight-hanging' },
+        g: { label: 'غرام', short: 'غ', icon: 'fa-weight-hanging' },
+        lb: { label: 'رطل', short: 'رطل', icon: 'fa-weight-hanging' }
+    };
+
+    // أزرار الوزن السريع حسب الوحدة
+    const QUICK_WEIGHTS = {
+        kg: [0.25, 0.5, 1, 1.5, 2, 3, 5, 10],
+        g: [50, 100, 250, 500, 750, 1000, 1500, 2000],
+        lb: [0.25, 0.5, 1, 1.5, 2, 3, 5, 10]
+    };
+
+    let _currentScaleProductId = null;
+
+    // ==================== 1. تعديل نموذج إضافة/تعديل المنتج ====================
+    // حقن حقول الميزان في نافذة إضافة المنتج (بعد فتحها)
+    function injectScaleFieldsInProductModal() {
+        // ننتظر فتح النافذة ثم نضيف الحقول
+        const observer = new MutationObserver((mutations) => {
+            const modalBody = document.querySelector('.modal-body');
+            if (!modalBody) return;
+            
+            // تحقق هل الحقول موجودة فعلاً
+            const nameField = document.getElementById('p-name');
+            if (!nameField) return;
+            
+            // لا تكرر الإضافة
+            if (document.getElementById('scale-toggle-wrap')) return;
+
+            // جلب بيانات المنتج إذا كان تعديل
+            const saveBtn = document.querySelector('.modal-footer .btn-primary');
+            let existingProduct = null;
+            if (saveBtn) {
+                const onclickAttr = saveBtn.getAttribute('onclick') || '';
+                const match = onclickAttr.match(/saveProduct\('([^']+)'\)/);
+                if (match && match[1]) {
+                    existingProduct = DB.products.find(x => x.id === match[1]);
+                }
+            }
+
+            const isScale = existingProduct?.is_scale || false;
+            const scaleUnit = existingProduct?.scale_unit || 'kg';
+            const scalePrice = existingProduct?.scale_price || '';
+            const scalePerUnit = existingProduct?.scale_per_unit || '';
+
+            const scaleHTML = `
+                <div id="scale-toggle-wrap" style="margin-top:8px;">
+                    <div class="scale-toggle-container ${isScale ? 'active' : ''}" onclick="ScaleSystem.toggleScaleInForm(this)">
+                        <div class="scale-toggle-icon">⚖️</div>
+                        <div class="scale-toggle-label">بيع بالميزان (بالوزن)</div>
+                        <div class="scale-toggle-switch"></div>
+                        <input type="hidden" id="p-is-scale" value="${isScale ? '1' : '0'}">
+                    </div>
+                    
+                    <div class="scale-fields ${isScale ? 'visible' : ''}" id="scale-fields-container">
+                        <div style="margin-bottom:12px;font-size:12px;color:#92400e;font-weight:600;">
+                            <i class="fas fa-info-circle"></i> حدد وحدة الوزن وسعرها وكم وزن في كل وحدة مخزون
+                        </div>
+                        
+                        <label class="form-label">وحدة الميزان</label>
+                        <div class="scale-unit-selector">
+                            <div class="scale-unit-btn ${scaleUnit === 'kg' ? 'active' : ''}" onclick="ScaleSystem.selectUnit(this, 'kg')">
+                                <i class="fas fa-weight-hanging"></i><br>كيلوغرام
+                            </div>
+                            <div class="scale-unit-btn ${scaleUnit === 'g' ? 'active' : ''}" onclick="ScaleSystem.selectUnit(this, 'g')">
+                                <i class="fas fa-weight-hanging"></i><br>غرام
+                            </div>
+                            <div class="scale-unit-btn ${scaleUnit === 'lb' ? 'active' : ''}" onclick="ScaleSystem.selectUnit(this, 'lb')">
+                                <i class="fas fa-weight-hanging"></i><br>رطل
+                            </div>
+                        </div>
+                        <input type="hidden" id="p-scale-unit" value="${scaleUnit}">
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-tag" style="color:#f59e0b"></i> سعر الوحدة (الكيلو/الغرام/الرطل)</label>
+                                <input type="number" class="form-control" id="p-scale-price" value="${scalePrice}" min="0" step="0.01" placeholder="مثال: 500 دج للكيلو">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-boxes" style="color:#f59e0b"></i> كم وزن = 1 وحدة مخزون</label>
+                                <input type="number" class="form-control" id="p-scale-per-unit" value="${scalePerUnit}" min="0.01" step="0.01" placeholder="مثال: 100 كجم">
+                            </div>
+                        </div>
+                        
+                        <div style="background:#fef9c3;padding:10px;border-radius:8px;font-size:11px;color:#854d0e;line-height:1.7;margin-top:4px;">
+                            <strong>💡 مثال:</strong> إذا كان عندك 20 وحدة من منتج وكل وحدة = 100 كجم<br>
+                            فالمخزون الكلي = 2000 كجم. كلما بعت 100 كجم ينقص المخزون بـ 1
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // إضافة قبل حقل الوصف أو في آخر النموذج
+            const descGroup = modalBody.querySelector('#p-desc')?.closest('.form-group');
+            if (descGroup) {
+                descGroup.insertAdjacentHTML('beforebegin', scaleHTML);
+            } else {
+                modalBody.insertAdjacentHTML('beforeend', scaleHTML);
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+        // نوقف المراقب بعد 5 ثوان لتوفير الأداء
+        setTimeout(() => observer.disconnect(), 5000);
+    }
+
+    // تفعيل/تعطيل الميزان في النموذج
+    function toggleScaleInForm(el) {
+        el.classList.toggle('active');
+        const isActive = el.classList.contains('active');
+        document.getElementById('p-is-scale').value = isActive ? '1' : '0';
+        const fields = document.getElementById('scale-fields-container');
+        if (isActive) {
+            fields.classList.add('visible');
+        } else {
+            fields.classList.remove('visible');
+        }
+    }
+
+    // اختيار وحدة الميزان
+    function selectUnit(el, unit) {
+        el.parentNode.querySelectorAll('.scale-unit-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('p-scale-unit').value = unit;
+    }
+
+    // ==================== 2. تعديل دالة الحفظ (باستدعاء ذكي) ====================
+    // نلتقط دالة saveProduct الأصلية ونضيف عليها حقول الميزان
+    const _origSaveProduct = window.saveProduct;
+    window.saveProduct = function(id) {
+        // قراءة حقول الميزان قبل الحفظ
+        const isScaleEl = document.getElementById('p-is-scale');
+        const scaleUnitEl = document.getElementById('p-scale-unit');
+        const scalePriceEl = document.getElementById('p-scale-price');
+        const scalePerUnitEl = document.getElementById('p-scale-per-unit');
+
+        // نخزن القيم مؤقتاً
+        window._scaleData = null;
+        if (isScaleEl && isScaleEl.value === '1') {
+            const sp = parseFloat(scalePriceEl?.value) || 0;
+            const spu = parseFloat(scalePerUnitEl?.value) || 100;
+            if (sp <= 0) {
+                if (typeof toast === 'function') toast('يرجى إدخال سعر وحدة الميزان!', 'error');
+                return;
+            }
+            window._scaleData = {
+                is_scale: true,
+                scale_unit: scaleUnitEl?.value || 'kg',
+                scale_price: sp,
+                scale_per_unit: spu,
+                scale_sold: 0 // الكمية المباعة من الميزان
+            };
+        }
+
+        // استدعاء الدالة الأصلية
+        _origSaveProduct(id);
+
+        // بعد الحفظ، نضيف بيانات الميزان للمنتج
+        if (window._scaleData) {
+            let product;
+            if (id) {
+                product = DB.products.find(x => x.id === id);
+            } else {
+                // آخر منتج مضاف
+                product = DB.products[DB.products.length - 1];
+            }
+            if (product) {
+                Object.assign(product, window._scaleData);
+                if (!product.scale_sold) product.scale_sold = 0;
+                saveToStorage();
+            }
+        } else if (isScaleEl && isScaleEl.value === '0') {
+            // إزالة بيانات الميزان إذا تم تعطيله
+            let product = id ? DB.products.find(x => x.id === id) : DB.products[DB.products.length - 1];
+            if (product) {
+                product.is_scale = false;
+                saveToStorage();
+            }
+        }
+        window._scaleData = null;
+    };
+
+    // ==================== 3. اعتراض إضافة للسلة ====================
+    const _origAddToCart = window.addToCart;
+    window.addToCart = function(productId) {
+        const p = DB.products.find(x => x.id === productId);
+        if (!p) return;
+
+        // إذا المنتج مرتبط بميزان -> فتح نافذة الوزن
+        if (p.is_scale) {
+            openWeightModal(p);
+            return;
+        }
+
+        // وإلا: السلوك الأصلي
+        _origAddToCart(productId);
+    };
+
+    // ==================== 4. نافذة إدخال الوزن ====================
+    function openWeightModal(product) {
+        _currentScaleProductId = product.id;
+        const unit = UNITS[product.scale_unit] || UNITS.kg;
+        const quickWeights = QUICK_WEIGHTS[product.scale_unit] || QUICK_WEIGHTS.kg;
+        
+        // حساب الكمية المتبقية بالميزان
+        const totalWeight = product.current_stock * product.scale_per_unit;
+        const remaining = totalWeight - (product.scale_sold || 0);
+
+        const body = document.getElementById('scale-modal-body');
+        body.innerHTML = `
+            <div class="scale-product-info">
+                <div class="scale-product-emoji">${product.image ? '<img src="'+product.image+'" style="width:50px;height:50px;border-radius:10px;object-fit:cover">' : '<span style="font-size:36px">'+product.emoji+'</span>'}</div>
+                <div class="scale-product-details">
+                    <h4>${product.name}</h4>
+                    <p>السعر: ${_fmt(product.scale_price)} / ${unit.short}</p>
+                    <p style="color:#059669;font-weight:700">المتبقي: ${_fmt(remaining)} ${unit.short}</p>
+                </div>
+            </div>
+            
+            <div class="scale-weight-input-group">
+                <input type="number" class="scale-weight-input" id="scale-weight-value" 
+                    placeholder="0.00" min="0.01" step="0.01" max="${remaining}"
+                    oninput="ScaleSystem.updatePriceSummary()">
+                <span class="scale-weight-unit">${unit.short}</span>
+            </div>
+            
+            <div class="scale-quick-weights">
+                ${quickWeights.map(w => `
+                    <button class="scale-quick-btn" onclick="ScaleSystem.setQuickWeight(${w})">${w} ${unit.short}</button>
+                `).join('')}
+            </div>
+            
+            <div class="scale-price-summary" id="scale-price-summary">
+                <div class="scale-price-row">
+                    <span>الوزن</span>
+                    <span id="summary-weight">0.00 ${unit.short}</span>
+                </div>
+                <div class="scale-price-row">
+                    <span>سعر الوحدة</span>
+                    <span>${_fmt(product.scale_price)} / ${unit.short}</span>
+                </div>
+                <div class="scale-price-row total">
+                    <span>الإجمالي</span>
+                    <span id="summary-total">${_fmt(0)}</span>
+                </div>
+            </div>
+        `;
+
+        const actions = document.getElementById('scale-modal-actions');
+        actions.innerHTML = `
+            <button class="btn btn-secondary" onclick="ScaleSystem.closeWeightModal()">إلغاء</button>
+            <button class="btn btn-success" onclick="ScaleSystem.confirmWeightSale()" style="flex:2">
+                <i class="fas fa-cart-plus"></i> إضافة للسلة
+            </button>
+        `;
+
+        document.getElementById('scale-sell-overlay').classList.add('open');
+        setTimeout(() => document.getElementById('scale-weight-value')?.focus(), 300);
+    }
+
+    function setQuickWeight(w) {
+        document.getElementById('scale-weight-value').value = w;
+        updatePriceSummary();
+    }
+
+    function updatePriceSummary() {
+        const product = DB.products.find(x => x.id === _currentScaleProductId);
+        if (!product) return;
+        const weight = parseFloat(document.getElementById('scale-weight-value')?.value) || 0;
+        const unit = UNITS[product.scale_unit] || UNITS.kg;
+        const total = weight * product.scale_price;
+
+        document.getElementById('summary-weight').textContent = _fmt(weight) + ' ' + unit.short;
+        document.getElementById('summary-total').textContent = _fmt(total);
+    }
+
+    function closeWeightModal() {
+        document.getElementById('scale-sell-overlay').classList.remove('open');
+        _currentScaleProductId = null;
+    }
+
+    function confirmWeightSale() {
+        const product = DB.products.find(x => x.id === _currentScaleProductId);
+        if (!product) return;
+
+        const weight = parseFloat(document.getElementById('scale-weight-value')?.value) || 0;
+        if (weight <= 0) {
+            if (typeof toast === 'function') toast('يرجى إدخال الوزن!', 'error');
+            return;
+        }
+
+        const totalWeight = product.current_stock * product.scale_per_unit;
+        const remaining = totalWeight - (product.scale_sold || 0);
+        if (weight > remaining && !DB.settings.allowOversell) {
+            if (typeof toast === 'function') toast('الكمية المطلوبة أكبر من المتبقي!', 'error');
+            return;
+        }
+
+        const unit = UNITS[product.scale_unit] || UNITS.kg;
+        const totalPrice = weight * product.scale_price;
+        
+        // حساب تكلفة الشراء بالوزن (سعر الشراء لكل وحدة وزن)
+        const costPerWeightUnit = product.purchase_price / product.scale_per_unit;
+        const totalCost = weight * costPerWeightUnit;
+
+        // إضافة للسلة مع معلومات الميزان
+        cart.push({
+            product_id: product.id,
+            product_name: product.name + ' (' + _fmt(weight) + ' ' + unit.short + ')',
+            product_emoji: product.emoji,
+            product_image: product.image,
+            quantity: 1,
+            unit_price: totalPrice,
+            cost_price: totalCost,
+            total_price: totalPrice,
+            // بيانات الميزان الإضافية
+            _is_scale_item: true,
+            _scale_weight: weight,
+            _scale_unit: product.scale_unit,
+            _scale_price_per_unit: product.scale_price
+        });
+
+        renderCart();
+        closeWeightModal();
+        if (typeof toast === 'function') toast('تمت إضافة ' + product.name + ' (' + _fmt(weight) + ' ' + unit.short + ')', 'success');
+    }
+
+    // ==================== 5. اعتراض إتمام البيع لتحديث الميزان ====================
+    const _origCompleteSale = window.completeSale;
+    window.completeSale = function() {
+        // قبل إتمام البيع: نحفظ بيانات الميزان المباعة
+        const scaleItems = cart.filter(item => item._is_scale_item);
+        
+        // استدعاء الدالة الأصلية
+        _origCompleteSale();
+
+        // بعد البيع: تحديث كميات الميزان ونقص المخزون
+        scaleItems.forEach(item => {
+            const product = DB.products.find(x => x.id === item.product_id);
+            if (!product || !product.is_scale) return;
+
+            // إضافة الوزن المباع
+            product.scale_sold = (product.scale_sold || 0) + item._scale_weight;
+
+            // حساب هل يجب إنقاص وحدة من المخزون
+            // عدد الوحدات المستهلكة = الوزن الكلي المباع / وزن الوحدة
+            const unitsConsumed = Math.floor(product.scale_sold / product.scale_per_unit);
+            // الوحدات التي تم خصمها سابقاً بالفعل من المخزون عبر completeSale الأصلية = 1 (quantity=1)
+            // لكن المنطق الحقيقي: ننقص بناءً على الميزان
+            // الدالة الأصلية أنقصت 1 من المخزون. نحتاج تصحيح ذلك.
+            // المطلوب: إنقاص المخزون فقط عندما ينفد scale_per_unit بالكامل
+            
+            // تراجع عن النقص الذي فعلته الدالة الأصلية
+            product.current_stock += 1; // استرجاع ما أنقصته completeSale الأصلية
+            
+            // إعادة الحساب الصحيح
+            const originalStock = product.current_stock;
+            const shouldDeduct = unitsConsumed;
+            // إجمالي المخزون الذي يجب أن يكون
+            const correctStock = originalStock - shouldDeduct + (product._scale_deducted || 0);
+            
+            // كم يجب خصمه الآن (الجديد فقط)
+            if (unitsConsumed > (product._scale_deducted || 0)) {
+                const toDeduct = unitsConsumed - (product._scale_deducted || 0);
+                product.current_stock -= toDeduct;
+                product._scale_deducted = unitsConsumed;
+                
+                // تسجيل حركة المخزون
+                if (typeof DB !== 'undefined' && DB.stockMovements) {
+                    DB.stockMovements.push({
+                        id: _uid(),
+                        product_id: product.id,
+                        product_name: product.name,
+                        type: 'out',
+                        quantity: toDeduct,
+                        balance_after: product.current_stock,
+                        reason: 'نقصان ميزان (بيع ' + _fmt(item._scale_weight) + ' ' + (UNITS[product.scale_unit]?.short || 'كجم') + ')',
+                        date: new Date().toISOString()
+                    });
+                }
+            } else {
+                // لم يُنقص شيء إضافي
+            }
+        });
+
+        if (scaleItems.length > 0) {
+            saveToStorage();
+        }
+    };
+
+    // ==================== 6. نظام فساد الميزان ====================
+    function openSpoilModal(productId) {
+        const product = DB.products.find(x => x.id === productId);
+        if (!product || !product.is_scale) return;
+
+        const unit = UNITS[product.scale_unit] || UNITS.kg;
+        const totalWeight = product.current_stock * product.scale_per_unit;
+        const remaining = totalWeight - (product.scale_sold || 0);
+
+        const body = document.getElementById('scale-spoil-body');
+        body.innerHTML = `
+            <div class="scale-product-info" style="background:#fef2f2;border-color:#fecaca;">
+                <div class="scale-product-emoji">${product.emoji}</div>
+                <div class="scale-product-details">
+                    <h4>${product.name}</h4>
+                    <p>المتبقي: ${_fmt(remaining)} ${unit.short}</p>
+                </div>
+            </div>
+            
+            <div style="margin-bottom:16px;">
+                <label class="form-label" style="color:#991b1b;"><i class="fas fa-exclamation-triangle"></i> كمية الفساد بالوزن</label>
+                <div class="scale-weight-input-group">
+                    <input type="number" class="scale-weight-input" id="spoil-weight-value" 
+                        placeholder="0.00" min="0.01" step="0.01" max="${remaining}"
+                        style="border-color:#fca5a5;" oninput="ScaleSystem.updateSpoilSummary('${productId}')">
+                    <span class="scale-weight-unit" style="color:#ef4444;background:#fef2f2;">${unit.short}</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">سبب الفساد</label>
+                <input type="text" class="form-control" id="spoil-reason" placeholder="مثال: انتهاء الصلاحية، تلف بسبب الحرارة...">
+            </div>
+            
+            <div class="scale-price-summary" style="background:linear-gradient(135deg,#fef2f2,#fecaca);border-color:#fca5a5;" id="spoil-summary">
+                <div class="scale-price-row">
+                    <span>الوزن الفاسد</span>
+                    <span id="spoil-summary-weight">0.00 ${unit.short}</span>
+                </div>
+                <div class="scale-price-row total" style="color:#dc2626;">
+                    <span>قيمة الخسارة</span>
+                    <span id="spoil-summary-loss">${_fmt(0)}</span>
+                </div>
+            </div>
+        `;
+
+        const actions = document.getElementById('scale-spoil-actions');
+        actions.innerHTML = `
+            <button class="btn btn-secondary" onclick="ScaleSystem.closeSpoilModal()">إلغاء</button>
+            <button class="btn btn-danger" onclick="ScaleSystem.confirmSpoilage('${productId}')" style="flex:2">
+                <i class="fas fa-trash-alt"></i> تسجيل الفساد
+            </button>
+        `;
+
+        document.getElementById('scale-spoil-overlay').classList.add('open');
+    }
+
+    function updateSpoilSummary(productId) {
+        const product = DB.products.find(x => x.id === productId);
+        if (!product) return;
+        const weight = parseFloat(document.getElementById('spoil-weight-value')?.value) || 0;
+        const unit = UNITS[product.scale_unit] || UNITS.kg;
+        const costPerUnit = product.purchase_price / product.scale_per_unit;
+        const loss = weight * costPerUnit;
+
+        document.getElementById('spoil-summary-weight').textContent = _fmt(weight) + ' ' + unit.short;
+        document.getElementById('spoil-summary-loss').textContent = _fmt(loss);
+    }
+
+    function closeSpoilModal() {
+        document.getElementById('scale-spoil-overlay').classList.remove('open');
+    }
+
+    function confirmSpoilage(productId) {
+        const product = DB.products.find(x => x.id === productId);
+        if (!product || !product.is_scale) return;
+
+        const weight = parseFloat(document.getElementById('spoil-weight-value')?.value) || 0;
+        const reason = document.getElementById('spoil-reason')?.value || 'فساد منتج';
+
+        if (weight <= 0) {
+            if (typeof toast === 'function') toast('يرجى إدخال كمية الفساد!', 'error');
+            return;
+        }
+
+        const totalWeight = product.current_stock * product.scale_per_unit;
+        const remaining = totalWeight - (product.scale_sold || 0);
+        if (weight > remaining) {
+            if (typeof toast === 'function') toast('الكمية أكبر من المتبقي!', 'error');
+            return;
+        }
+
+        const unit = UNITS[product.scale_unit] || UNITS.kg;
+        const costPerUnit = product.purchase_price / product.scale_per_unit;
+        const lossValue = weight * costPerUnit;
+
+        // إضافة كخسارة
+        product.scale_sold = (product.scale_sold || 0) + weight;
+
+        // حساب نقص المخزون
+        const unitsConsumed = Math.floor(product.scale_sold / product.scale_per_unit);
+        if (unitsConsumed > (product._scale_deducted || 0)) {
+            const toDeduct = unitsConsumed - (product._scale_deducted || 0);
+            product.current_stock -= toDeduct;
+            product._scale_deducted = unitsConsumed;
+        }
+
+        // تسجيل في الخسائر
+        DB.losses.push({
+            id: _uid(),
+            type: 'تلف ميزان',
+            description: product.name + ' - ' + _fmt(weight) + ' ' + unit.short + ' فاسد',
+            reason: reason,
+            amount: lossValue,
+            date: new Date().toISOString()
+        });
+
+        // تسجيل حركة مخزون
+        DB.stockMovements.push({
+            id: _uid(),
+            product_id: product.id,
+            product_name: product.name,
+            type: 'out',
+            quantity: weight,
+            balance_after: product.current_stock,
+            reason: 'فساد ميزان: ' + reason,
+            date: new Date().toISOString()
+        });
+
+        saveToStorage();
+        closeSpoilModal();
+        if (typeof toast === 'function') toast('تم تسجيل فساد ' + _fmt(weight) + ' ' + unit.short + ' من ' + product.name + ' كخسارة (' + _fmt(lossValue) + ')', 'warning');
+        
+        // تحديث الواجهات
+        if (typeof filterInventory === 'function') filterInventory();
+        if (typeof renderLosses === 'function') renderLosses();
+        if (typeof renderDashboard === 'function') renderDashboard();
+    }
+
+    // ==================== 7. شارة الميزان على المنتجات ====================
+    // تحسين عرض المنتجات لإظهار شارة الميزان
+    const _lastRenderPosProducts = window.renderPosProducts;
+    window.renderPosProducts = function(catFilter) {
+        // استدعاء الدالة الأصلية أولاً
+        _lastRenderPosProducts(catFilter);
+
+        // إضافة شارات الميزان
+        setTimeout(() => {
+            const grid = document.getElementById('products-grid');
+            if (!grid) return;
+            const cards = grid.querySelectorAll('.product-card');
+            cards.forEach(card => {
+                const onclick = card.getAttribute('onclick') || '';
+                const match = onclick.match(/addToCart\('([^']+)'\)/);
+                if (!match) return;
+                const product = DB.products.find(x => x.id === match[1]);
+                if (product && product.is_scale) {
+                    const unit = UNITS[product.scale_unit] || UNITS.kg;
+                    // إضافة شارة الميزان
+                    if (!card.querySelector('.scale-badge')) {
+                        card.insertAdjacentHTML('afterbegin', `
+                            <div class="scale-badge"><i class="fas fa-balance-scale"></i> ${unit.short}</div>
+                        `);
+                    }
+                    // تحديث عرض المخزون
+                    const stockEl = card.querySelector('.product-stock');
+                    if (stockEl) {
+                        const totalWeight = product.current_stock * product.scale_per_unit;
+                        const remaining = totalWeight - (product.scale_sold || 0);
+                        stockEl.textContent = 'متبقي: ' + _fmt(remaining) + ' ' + unit.short;
+                        if (remaining <= product.scale_per_unit) stockEl.classList.add('low');
+                    }
+                    // تحديث السعر
+                    const priceEl = card.querySelector('.product-price');
+                    if (priceEl) {
+                        priceEl.textContent = _fmt(product.scale_price) + ' / ' + unit.short;
+                    }
+                }
+            });
+        }, 50);
+    };
+
+    // ==================== 8. إضافة زر الفساد في جدول المخزون ====================
+    // نضيف زر فساد الميزان في صفحة المخزون
+    const _origFilterInventory = window.filterInventory;
+    if (_origFilterInventory) {
+        window.filterInventory = function() {
+            _origFilterInventory();
+            
+            // بعد الرندر، نضيف أزرار فساد الميزان
+            setTimeout(() => {
+                DB.products.forEach(p => {
+                    if (!p.is_scale) return;
+                    const row = document.querySelector(`tr[data-product-id="${p.id}"]`) || 
+                                document.querySelector(`button[onclick*="editProduct('${p.id}')"]`)?.closest('tr');
+                    if (!row) return;
+                    
+                    const actionsCell = row.querySelector('td:last-child');
+                    if (!actionsCell || actionsCell.querySelector('.scale-spoil-btn')) return;
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'scale-spoil-btn';
+                    btn.innerHTML = '<i class="fas fa-balance-scale"></i> فساد ميزان';
+                    btn.onclick = (e) => { e.stopPropagation(); openSpoilModal(p.id); };
+                    
+                    const div = actionsCell.querySelector('div') || actionsCell;
+                    div.appendChild(btn);
+                });
+            }, 100);
+        };
+    }
+
+    // ==================== 9. طباعة فاتورة الميزان ====================
+    function printScaleInvoice(saleData) {
+        const printDiv = document.getElementById('scale-invoice-print');
+        const storeName = DB.settings?.storeName || 'المتجر';
+        const currency = DB.settings?.currency || 'دج';
+        const now = new Date();
+        
+        let scaleItems = [];
+        if (saleData && saleData.items) {
+            scaleItems = saleData.items.filter(i => i._is_scale_item);
+        }
+        
+        if (scaleItems.length === 0) {
+            if (typeof toast === 'function') toast('لا توجد عناصر ميزان في هذه الفاتورة', 'info');
+            return;
+        }
+
+        const subtotal = scaleItems.reduce((a, i) => a + i.total_price, 0);
+
+        printDiv.innerHTML = `
+            <div class="inv-header">
+                <h2>⚖️ ${storeName}</h2>
+                <p>فاتورة بيع بالميزان</p>
+                <p style="font-size:10px;color:#666;">${now.toLocaleString('ar-DZ')}</p>
+            </div>
+            <div class="inv-divider"></div>
+            ${scaleItems.map(item => `
+                <div class="inv-row">
+                    <span>${item.product_name}</span>
+                    <span>${_fmt(item.total_price)} ${currency}</span>
+                </div>
+            `).join('')}
+            <div class="inv-divider"></div>
+            <div class="inv-row inv-total">
+                <span>الإجمالي</span>
+                <span>${_fmt(subtotal)} ${currency}</span>
+            </div>
+            <div class="inv-divider"></div>
+            <p style="text-align:center;font-size:10px;color:#999;margin-top:10px;">شكراً لتعاملكم معنا ❤️</p>
+        `;
+
+        // Use separate print window instead of modifying main page
+        const pw = window.open('', '_blank', 'width=400,height=500');
+        pw.document.write('<html dir="rtl"><head><meta charset="UTF-8"><title>فاتورة ميزان</title><style>body{font-family:Cairo,Tajawal,sans-serif;padding:20px;font-size:12px;direction:rtl;max-width:300px;margin:0 auto}h2{font-size:16px;margin:0 0 4px;text-align:center}.row{display:flex;justify-content:space-between;padding:3px 0}.divider{border-top:1px dashed #999;margin:8px 0}.total{font-size:16px;font-weight:900}@media print{body{padding:10px}}</style></head><body>');
+        pw.document.write(printDiv.innerHTML);
+        pw.document.write('</body></html>');
+        pw.document.close();
+        setTimeout(function(){ pw.print(); }, 300);
+    }
+
+    // حقول الميزان مدمجة مباشرة في openProductModal - لا حاجة للمراقب
+
+    // ==================== 11. تحسين عرض السلة لعناصر الميزان ====================
+    const _origRenderCart = window.renderCart;
+    window.renderCart = function() {
+        _origRenderCart();
+        
+        // إضافة معلومات الميزان في عناصر السلة
+        setTimeout(() => {
+            cart.forEach((item, idx) => {
+                if (!item._is_scale_item) return;
+                const el = document.querySelector(`#cart-items .cart-item[data-idx="${idx}"]`);
+                if (!el || el.querySelector('.cart-scale-info')) return;
+                
+                const unit = UNITS[item._scale_unit] || UNITS.kg;
+                const infoDiv = el.querySelector('.cart-item-info');
+                if (infoDiv) {
+                    infoDiv.insertAdjacentHTML('beforeend', `
+                        <div class="cart-scale-info">
+                            <i class="fas fa-balance-scale"></i>
+                            ${_fmt(item._scale_weight)} ${unit.short} × ${_fmt(item._scale_price_per_unit)}
+                        </div>
+                    `);
+                }
+                
+                // إخفاء أزرار +/- للعناصر الموزونة (الكمية دائماً 1)
+                const qtyDiv = el.querySelector('.cart-item-qty');
+                if (qtyDiv) {
+                    qtyDiv.style.display = 'none';
+                }
+            });
+        }, 50);
+    };
+
+    // ==================== واجهة عامة ====================
+    return {
+        toggleScaleInForm,
+        selectUnit,
+        openWeightModal,
+        setQuickWeight,
+        updatePriceSummary,
+        closeWeightModal,
+        confirmWeightSale,
+        openSpoilModal,
+        updateSpoilSummary,
+        closeSpoilModal,
+        confirmSpoilage,
+        printScaleInvoice,
+        UNITS
+    };
+
+})();
+
+// ==================== ربط دالة طباعة فاتورة الميزان عالمياً ====================
+window.printScaleInvoice = ScaleSystem.printScaleInvoice;
+window.openScaleSpoilModal = ScaleSystem.openSpoilModal;
+
+console.log('✅ نظام الميزان الذكي تم تحميله بنجاح - Scale System v2.0');
 </script>
 
 </body>
